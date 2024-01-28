@@ -1,0 +1,56 @@
+/////////////////////////////////
+MENDAPATKAN KODE KECAMATAN - SLS
+---------------------------------
+SELECT kecamatan.kode AS "Kode Kecamatan", kecamatan.nama AS "Kecamatan", desa.kode AS "Kode Desa" , desa.nama AS "Desa" , sls.kode AS "Kode SLS", sls.nama_x AS "Nama SLS"
+FROM desa
+INNER JOIN kecamatan ON desa.kode_kec = kecamatan.kode
+INNER JOIN x ON desa.kode = x.kode_desa
+INNER JOIN sls ON x.nama = sls.nama_x;
+
+/////////////////////////////////
+
+
+MENDAPATKAN KOSEKA BESERTA KECAMATAN
+---------------------------------
+SELECT koseka.nama AS "Koseka", kecamatan.nama AS "Kecamatan" FROM `koseka` 
+INNER JOIN kecamatan ON kecamatan.kode = koseka.id_kec
+WHERE id_kegiatan = "ST2023"
+ORDER BY id_kec ASC;
+
+/////////////////////////////////
+
+
+MENDAPATKAN DOKUMEN BESERTA NAMA WILAYAH DAN NAMA ORGANISASI LAPANGAN
+---------------------------------
+SELECT dokumen.kode_sls AS "Kode SLS", sls.nama_x AS 'SLS' , dokumen.kode_desa AS 'Kode Desa', desa.nama AS 'Desa' , dokumen.kode_kec AS 'Kode Kecamatan' ,kecamatan.nama AS 'Kecamatan', dokumen.id_ppl, ppl.nama AS 'PPL', dokumen.id_pml, pml.nama AS 'PML', dokumen.id_koseka ,koseka.nama AS 'Koseka'
+FROM `dokumen` 
+
+INNER JOIN kecamatan ON dokumen.kode_kec = kecamatan.kode
+INNER JOIN desa ON dokumen.kode_desa = desa.kode AND dokumen.kode_kec = desa.kode_kec
+INNER JOIN sls ON dokumen.kode_sls = sls.kode AND dokumen.kode_desa = sls.kode_desa AND dokumen.kode_kec = sls.kode_kec
+LEFT JOIN koseka ON dokumen.id_koseka = koseka.id
+LEFT JOIN pml ON dokumen.id_pml = pml.id 
+LEFT JOIN ppl ON dokumen.id_ppl = ppl.id
+
+WHERE dokumen.id_kegiatan = 'ST2023' AND koseka.id_kegiatan = 'ST2023' AND pml.id_kegiatan = 'ST2023' AND ppl.id_kegiatan = 'ST2023';
+
+/////////////////////////////////
+
+
+MIRIP SEPERTI YANG DIATAS, TP INI MENGAMBIL WAKTU EDCOD DAN ENTRI
+---------------------------------
+SELECT dokumen.kode_sls AS "Kode SLS", sls.nama_x AS 'SLS' , dokumen.kode_desa AS 'Kode Desa', desa.nama AS 'Desa' , dokumen.kode_kec AS 'Kode Kecamatan' ,kecamatan.nama AS 'Kecamatan', dokumen.id_ppl, ppl.nama AS 'PPL', dokumen.id_pml, pml.nama AS 'PML', dokumen.id_koseka ,koseka.nama AS 'Koseka', sensus.tgl_pengdok, sensus.tgl_entri, sensus.start_edcod, sensus.end_edcod
+FROM `dokumen` 
+
+INNER JOIN kecamatan ON dokumen.kode_kec = kecamatan.kode
+INNER JOIN desa ON dokumen.kode_desa = desa.kode AND dokumen.kode_kec = desa.kode_kec
+INNER JOIN sls ON dokumen.kode_sls = sls.kode AND dokumen.kode_desa = sls.kode_desa AND dokumen.kode_kec = sls.kode_kec
+LEFT JOIN koseka ON dokumen.id_koseka = koseka.id
+LEFT JOIN pml ON dokumen.id_pml = pml.id 
+LEFT JOIN ppl ON dokumen.id_ppl = ppl.id
+
+LEFT JOIN sensus ON dokumen.id_dok = sensus.id_dok
+
+WHERE dokumen.id_kegiatan = 'ST2023' AND koseka.id_kegiatan = 'ST2023' AND pml.id_kegiatan = 'ST2023' AND ppl.id_kegiatan = 'ST2023' AND sensus.id_kegiatan = 'ST2023';
+/////////////////////////////////
+

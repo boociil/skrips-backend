@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const port = 3001;
 const secretKey = 'secretKey';
+const salt = 10
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -33,7 +34,7 @@ function check_username(username) {
 function autentication(token) {
 
     // Check Token disini
-    
+
 }
 
 //END OF FUNCTION//////////////////////////////////////////////////
@@ -47,6 +48,8 @@ app.get("/", (req,res) => {
 });
 
 //END OF GET//////////////////////////////////////////////////
+
+
 
 ////////////////////////////////////////////////////////////////////
 // POST
@@ -100,15 +103,32 @@ app.post("/register", async (req,res) =>{
 })
 
 // API Login
-app.post("/login", async (req,res) => {
+app.post("/login", (req,res) => {
     try {
         const { username, password } = req.body;
 
         query = 'SELECT `username`,`pass` FROM `users` WHERE `username`= "' + username + '";';
         db.query(query, (err,results) =>{
-            res.send("Username ditemukan")
-            if (err) throw err;
-            res.status(500).send(err.message);
+
+            if (!results.length){
+                res.status(400).send("username tidak ditemukan");
+            }else{
+                let hashed_pass = results[0].pass;
+                console.log(hashed_pass);
+                bcrypt.compare(password, hashed_pass, function(err,results){
+                    if (err) {
+                        // Kesalahan selama pembandingan
+                        console.error('Error during password comparison:', err);
+                    } else {
+                        // Hasil pembandingan
+                        if (results) {
+                            res.status(200).send("Login Berhasil");
+                        } else {
+                            res.status(200).send("password salah");
+                        }
+                    }
+                });
+            }
         });
     } catch (error) {
         res.status(500).send("Terjadi Kesalahan")
@@ -122,16 +142,15 @@ app.post("/add_kegiatan", async (req,res) => {
 
     try{
         const { id, nama, jenis, metode, initiator_id, status, target_selesai, koseka, target_pengdok, target_edcod, target_entri } = req.body;
-        const hashedPass = await bcrypt.hash(password, 10);
 
         console.log('Id :', id);
-        console.log('nama :', password);
-        console.log('jenis :', hashedPass);
-        console.log('metode : ', gender);
-        console.log('initiator_id : ', firstName);
-        console.log('status : ', lastName);
-        console.log('target_selesai : ', role);
-        console.log('koseka : ', status);
+        console.log('nama :', nama);
+        console.log('jenis :', jenis);
+        console.log('metode : ', metode);
+        console.log('initiator_id : ', initiator_id);
+        console.log('status : ', status);
+        console.log('target_selesai : ', target_selesai);
+        console.log('koseka : ', koseka);
         console.log('target_pengdok : ', target_pengdok);
         console.log('target_edcod : ', target_edcod);
         console.log('target_entri : ', target_entri);
@@ -140,13 +159,6 @@ app.post("/add_kegiatan", async (req,res) => {
         query = "INSERT INTO `kegiatan` (`id`, `nama`, `jenis`, `metode`, `initiator_id`, `status`, `taget_selesai`, `koseka`, `target_pengdok`, `target_edcod`, `target_entri`, `created_at`) VALUES ('" + id +"', '" + nama +"', '" + jenis +"', '" + metode + "', '" + initiator_id +"', '" + status +"', '" + target_selesai + "', '" + koseka + "', '" + target_pengdok + "', '" + target_edcod + "', '" + target_entri + "', current_timestamp());"
         db.query(query, (err,results) => {
             if (err) throw err;
-            //var error_message = err.message.slice(0,12);
-            //res.status(404).send(error_message)
-            //if (error_message = "ER_DUP_ENTRY"){
-                //res.status(404).send("DUP_ENTRY");
-            //    console.log(error_message);
-            //}
-
         });
 
         res.status(201).send("Berhasil");
@@ -154,6 +166,65 @@ app.post("/add_kegiatan", async (req,res) => {
         res.status(500).send("Terjadi Kesalahan")
     }
 });
+
+app.post("/update_kegiatan", (req,res) => {
+
+    try {
+        const { id, nama, jenis, metode, initiator_id, status,tanggal_mulai, target_selesai, koseka, target_pengdok, target_edcod, target_entri } = req.body;
+        query = "UPDATE `kegiatan` SET `jenis` = '" + jenis + "', `metode` = '" + metode + "', `initiator_id` = '" + initiator_id + "', `status` = '" + status + "',`tanggal_mulai` = '" + tanggal_mulai +"', `target_selesai` = '" + target_selesai + "', `koseka` = '" + koseka + "', `target_pengdok` = '" + target_pengdok + "', `target_edcod` = '" + target_edcod + "', `target_entri` = '" + target_entri +"' WHERE `kegiatan`.`id` = '" + id + "' ";
+        db.query(query, (err,results) => {
+            if (err) throw err;
+            res.status(200).send(results);
+        })
+    } catch (error) {
+        
+    }
+});
+
+app.post("/delete_user/:usrnm", (req,res) =>{
+
+    // Autentikasi User
+
+    const usrnm = req.params.usrnm;
+    query = "DELETE FROM `users` WHERE username = '" + usrnm + "';";
+    //query = "SELECT * FROM USERS";
+    db.query(query , (err,results) =>{
+        if(err) throw err;
+        const a = results;
+        res.status(200).send("Hapus Users " + usrnm + " Berhasil");     
+    })
+});
+
+app.post("/delete_kegiatan/:id_kegiatan", (req,res) => {
+
+    // Autentikasi User
+
+    const id = req.params.id_kegiatan;
+    query = "DELETE FROM `kegiatan` WHERE id = '" + id + "';";
+    //query = "SELECT * FROM USERS";
+    db.query(query , (err,results) =>{
+        if(err) throw err;
+        const a = results;
+        res.status(200).send("Hapus kegiatan " + id + " Berhasil");     
+    })
+});
+
+app.post("/get_all_kegiatan", (req,res) => {
+    query = "SELECT nama,id,tanggal_mulai,status,metode FROM `kegiatan`;";
+    db.query(query, (err,results) => {
+        if (err) throw err;
+        res.status(200).send(results);
+    })
+})
+
+app.post("/get_all_mitra", (req,res) => {
+    query = "SELECT nama,status,start_contract, end_contract FROM `mitra`;";
+    db.query(query, (err,results) => {
+        if (err) throw err;
+        res.status(200).send(results);
+    })
+})
+
 
 //END OF POST//////////////////////////////////////////////////
 
