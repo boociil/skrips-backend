@@ -18,23 +18,59 @@ app.use(express.json());
 // MASI BELUM BISA DIPAKAI
 // Fungsi untuk check username, biar nanti lebih mudah
 function check_username(username) {
-    var list_usrnm;
-    query = 'SELECT `username` FROM `users`';
-    db.query(query , (err,results) =>{
-        if (err) throw err;
-        const hasil = results;
-        list_usrnm = hasil.map(hasil => hasil.username);
-    })
-    console.log(list_usrnm);
-    console.log(username);
-    list_usrnm.includes(username);
+    return new Promise((resolve, reject) => {
+        query = "SELECT * FROM `users` WHERE username = '" + username + "';";
+        db.query(query , (err,results) => {
+            if (err) {
+                reject(err);
+            }else{
+                const l = results.length
+                console.log("Total username ada di database : " + l);
+                console.log("l : " + l);
+                resolve(l);
+            }
+        });
+    }); 
+}
+
+function users_log_activiy(username, activity) {
+    
+}
+
+function set_login(username) {
+    
+    try {
+        query = "UPDATE `users` SET `status` = '1' WHERE `users`.`username` = '" + username +"'; ";
+        db.query(query, (err,results) => {
+            if (err) throw err;
+
+            // ATUR SESSION DISINI
+
+            // Masukan kedalam Log
+        });
+    } catch (error) {
+        return "Gagal tersambung";
+    }
+    
+
 }
 
 // Autentikasi User di cek menggunakan fungsi ini
-function autentication(token) {
+// Contoh middleware untuk verifikasi token
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (token == null) return res.sendStatus(401); // Unauthorized
 
-    // Check Token disini
-
+    jwt.verify(token, secretKey, (err, user) => {
+        if (err) return res.sendStatus(403); // Forbidden
+        req.user = user;
+        if (user.role == 'admin'){
+            next();
+        }else{
+            res.sendStatus(403); // Forbidden
+        }
+    });
 }
 
 //END OF FUNCTION//////////////////////////////////////////////////
@@ -57,18 +93,21 @@ app.get("/", (req,res) => {
 
 // API Check Username sudah ada atau belum di database
 app.post("/check_username/:usrnm", (req,res) =>{
-    query = 'SELECT `username` FROM `users`';
-    db.query(query , (err,results) =>{
-        const usrnm = req.params.usrnm;
-        const hasil = results;
-        const list_usrnm = hasil.map(hasil => hasil.username);
-        res.status(200).send(list_usrnm.includes(usrnm));
-    })
+    const usrnm = req.params.usrnm;
+    check_username(usrnm).then(l => {
+        if(l == 0){
+            // Username diperbolehkan atau tidak ada duplikasi
+            res.status(200).send("True")
+        }else{
+            // Username tidak diperbolehkan karena ada duplikasi
+            res.status(200).send("False");
+        }
+    });
 });
 
 // API Register User baru
-app.post("/register", async (req,res) =>{
-
+app.post("/register", authenticateToken, async (req,res) =>{
+    console.log(req.user);
     try{
         const { username, password, firstName, lastName, gender, role, status } = req.body;
         const hashedPass = await bcrypt.hash(password, 10);
@@ -86,13 +125,7 @@ app.post("/register", async (req,res) =>{
         query = "INSERT INTO `users` (`username`, `firstName`, `lastName`, `pass`, `role`, `status`, `created_at`) VALUES ('" + username + "', '" + firstName + "', '" + lastName + "', '" + hashedPass +"', '" + role + "', '" + status + "', current_timestamp());"
         db.query(query, (err,results) => {
             if (err) throw err;
-            //var error_message = err.message.slice(0,12);
-            //res.status(404).send(error_message)
-            //if (error_message = "ER_DUP_ENTRY"){
-                //res.status(404).send("DUP_ENTRY");
-            //    console.log(error_message);
-            //}
-
+            res.status(403).send(err);
         });
 
         res.status(201).send("Berhasil");
@@ -104,25 +137,38 @@ app.post("/register", async (req,res) =>{
 
 // API Login
 app.post("/login", (req,res) => {
+
     try {
+
         const { username, password } = req.body;
 
-        query = 'SELECT `username`,`pass` FROM `users` WHERE `username`= "' + username + '";';
+        query = 'SELECT username,firstName,lastName,gender,role,pass FROM `users` WHERE `username`= "' + username + '";';
         db.query(query, (err,results) =>{
-
             if (!results.length){
                 res.status(400).send("username tidak ditemukan");
             }else{
                 let hashed_pass = results[0].pass;
-                console.log(hashed_pass);
-                bcrypt.compare(password, hashed_pass, function(err,results){
+                bcrypt.compare(password, hashed_pass, function(err,resultss){
                     if (err) {
                         // Kesalahan selama pembandingan
                         console.error('Error during password comparison:', err);
                     } else {
                         // Hasil pembandingan
-                        if (results) {
-                            res.status(200).send("Login Berhasil");
+                        if (resultss) {
+                            // Informasi yang terkandung dalam token
+                            const info = {
+                                "username": results[0].username,
+                                "firstName": results[0].firstName,
+                                "lastName": results[0].lastName,
+                                "gender": results[0].gender,
+                                "role": results[0].role,
+                            }
+                            // TOKEN
+                            const token = jwt.sign(info,secretKey);
+                            console.log("Login berhasil");
+                            res.status(200).json({
+                                accessToken : token
+                            })
                         } else {
                             res.status(200).send("password salah");
                         }
@@ -181,18 +227,22 @@ app.post("/update_kegiatan", (req,res) => {
     }
 });
 
-app.post("/delete_user/:usrnm", (req,res) =>{
+app.post("/delete_user/:usrnm", authenticateToken, (req,res) =>{
 
     // Autentikasi User
-
-    const usrnm = req.params.usrnm;
-    query = "DELETE FROM `users` WHERE username = '" + usrnm + "';";
-    //query = "SELECT * FROM USERS";
-    db.query(query , (err,results) =>{
-        if(err) throw err;
-        const a = results;
-        res.status(200).send("Hapus Users " + usrnm + " Berhasil");     
-    })
+    try {
+        const usrnm = req.params.usrnm;
+        query = "DELETE FROM `users` WHERE username = '" + usrnm + "';";
+        //query = "SELECT * FROM USERS";
+        db.query(query , (err,results) =>{
+            if(err) throw err;
+            const a = results;
+            res.status(200).send("Hapus Users " + usrnm + " Berhasil");     
+        })
+    } catch (error) {
+        res.sendStatus(500);
+    }
+    
 });
 
 app.post("/delete_kegiatan/:id_kegiatan", (req,res) => {

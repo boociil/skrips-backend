@@ -1,2 +1,1 @@
-
-                res.status(404).send("DUP_ENTRY");
+results[0]
