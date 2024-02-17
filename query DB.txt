@@ -74,3 +74,33 @@ LEFT JOIN sensus ON dokumen.id_dok = sensus.id_dok
 WHERE dokumen.id_kegiatan = 'ST2023' AND koseka.id_kegiatan = 'ST2023' AND pml.id_kegiatan = 'ST2023' AND ppl.id_kegiatan = 'ST2023' AND sensus.id_kegiatan = 'ST2023';
 
 /////////////////////////////////
+
+---------------------------------
+MENDAPATKAN INFORMASI PENGOLAHAN SUATU KEGIATAN
+(Ganti id kegiatan, dan join dengan tabel ppl,pml dan koseka)
+
+SELECT dokumen.kode_kec, dokumen.kode_desa, dokumen.kode_sls, dokumen.id_ppl, dokumen.id_pml, dokumen.id_koseka, sensus.total_dokumen, sensus.tgl_pengdok, sensus.penerima_dok, sensus.status_pengdok, sensus.status_edcod, sensus.petugas_edcod, sensus.start_edcod, sensus.end_edcod, sensus.status_entri, sensus.petugas_entri, sensus.tgl_entri
+FROM `dokumen` 
+
+INNER JOIN sensus on dokumen.id_kegiatan = sensus.id_kegiatan AND dokumen.id_dok = sensus.id_dok
+
+WHERE dokumen.id_kegiatan = 'ST2023' AND sensus.id_kegiatan = 'ST2023'
+
+ORDER BY dokumen.kode_kec, dokumen.kode_desa, dokumen.kode_sls ASC
+
+;
+/////////////////////////////////
+
+
+SELECT dokumen.kode_kec, kecamatan.nama ,dokumen.kode_desa, desa.nama, dokumen.kode_sls, sls.nama_x , dokumen.id_ppl, dokumen.id_pml, dokumen.id_koseka, sensus.total_dokumen, sensus.tgl_pengdok, sensus.penerima_dok, sensus.status_pengdok, sensus.status_edcod, sensus.petugas_edcod, sensus.start_edcod, sensus.end_edcod, sensus.status_entri, sensus.petugas_entri, sensus.tgl_entri 
+FROM `dokumen` 
+
+INNER JOIN sensus on dokumen.id_kegiatan = sensus.id_kegiatan AND dokumen.id_dok = sensus.id_dok 
+INNER JOIN kecamatan on kecamatan.kode = dokumen.kode_kec
+INNER JOIN desa on desa.kode = dokumen.kode_desa
+INNER JOIN sls on sls.nama_x = dokumen.kode_sls
+
+WHERE dokumen.id_kegiatan = 'ST2023' AND sensus.id_kegiatan = 'ST2023' 
+
+ORDER BY dokumen.kode_kec, dokumen.kode_desa, dokumen.kode_sls ASC
+;

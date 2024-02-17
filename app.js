@@ -62,6 +62,7 @@ function check_username(username) {
     }); 
 }
 
+// Fungsi untuk mencatat log aktivitas user
 function users_log_activiy(username, activity, information = "-") {
     // List Activity User : 
     // LOGIN, LOGOUT, REGISTER NEW USER, ADD KEGIATAN, ]
@@ -103,39 +104,20 @@ function set_logout(username) {
     }
 }
 
-// Fungsi untuk mengisi dokumen ketika sensus dimulai
-function isi_dokumen_sensus(id_kegiatan) {
-    try {
-        
-        get_kode_daerah((err, results) => {
-            if (err) {
-                console.log("Terjadi kesalahan:", err);
-                return;
-            }
-            const kode_daerah = results
-            // generate query
-            the_query = "INSERT INTO `dokumen`(`id_kegiatan`, `id_dok`, `kode_sls`, `kode_desa`, `kode_kec`, `id_ppl`, `id_pml`, `id_koseka`, `jenis`) VALUES "
-            // id_dok start from 1
-
-            kode_daerah.forEach((item,index) => {
-                p = index + 1
-                if (p != kode_daerah.length){
-                    q = "('" + id_kegiatan +"','" + p +"','" + item.SLS + "','" + item.Desa + "','" + item.Kec + "','-','-','-','1'),";
-                    the_query += q;
-                }else{
-                    q = "('" + id_kegiatan +"','" + p +"','" + item.SLS + "','" + item.Desa + "','" + item.Kec + "','-','-','-','1')";
-                    the_query += q;
-                }
-                
-            });
-            the_query += ";";
-            console.log(the_query);
-
-        });
-
-    } catch (error) {
-        
-    }
+//
+function nothing_in_db(id_kegiatan, callback) {   
+    query = "SELECT * FROM `dokumen` WHERE id_kegiatan = '" + id_kegiatan + "' LIMIT 10 ;";
+    let hasil = false;
+    db.query(query, (err, results) => {
+        if (err) {
+            callback(err, null);
+            return;
+        }
+        if (results.length === 0) {
+            hasil = true;
+        }
+        callback(null, hasil);
+    });
 }
 
 // Mendapatkan seluruh kode sls,desa dan kecamatan
@@ -394,18 +376,79 @@ app.post("/get_info/:id", (req,res) => {
     })
 })
 
+// API untuk mengisi tabel dokumen dan sensus, parameter : id_kegiatan (id kegiatan sensus)
+app.post("/fill/:id_kegiatan",(req,res) => {
+    
+    id_kegiatan = req.params.id_kegiatan;
+    try {
+        nothing_in_db(id_kegiatan, (err, hasil) => {
+            if (err) {
+                console.error("Terjadi kesalahan:", err);
+                return;
+            }
+
+            if (hasil){
+                get_kode_daerah((err, results) => {
+                    if (err) {
+                        console.log("Terjadi kesalahan:", err);
+                        return;
+                    }
+                    const kode_daerah = results
+                    // generate query
+                    the_query = "INSERT INTO `dokumen`(`id_kegiatan`, `id_dok`, `kode_sls`, `kode_desa`, `kode_kec`, `id_ppl`, `id_pml`, `id_koseka`, `jenis`) VALUES "
+                    the_query_2 = "INSERT INTO `sensus`(`id_kegiatan`, `id_dok`) VALUES "
+                    // id_dok start from 1
+        
+                    kode_daerah.forEach((item,index) => {
+                        p = index + 1
+                        if (p != kode_daerah.length){
+                            q = "('" + id_kegiatan +"','" + p +"','" + item.SLS + "','" + item.Desa + "','" + item.Kec + "','-','-','-','1'),";
+                            q_2 = "('" + id_kegiatan + "','" + p +"'),"
+                            the_query += q;
+                            the_query_2 += q_2;
+                        }else{
+                            q = "('" + id_kegiatan +"','" + p +"','" + item.SLS + "','" + item.Desa + "','" + item.Kec + "','-','-','-','1')";
+                            q_2 = "('" + id_kegiatan + "','" + p +"')"
+                            the_query += q;
+                            the_query_2 += q_2;
+                        }
+                        
+                    });
+                    the_query += ";";
+                    the_query_2 += ";";
+                    db.query(the_query, (err, results) =>{
+                        if (err) throw err;
+                    })
+                    db.query(the_query_2, (err, results) =>{
+                        if (err) throw err;
+                    })
+                    res.status(200).send("Berhasil");
+                });
+            }else{
+                // jika kegiatan sudah ada di dalam tabel dokumen
+                res.status(400).send("Kegiatan sudah ada");
+            }
+        });
+
+    } catch (error) {
+        
+    }
+})
+
+// API untuk mendapatkan kode wilayah, dan status pengolahan sensus, parameter : id_kegiatan (id kegiatan sensus)
+app.post("/get_pengolahan_data/:id_kegiatan", (req,res) => {
+    id_kegiatan = req.params.id_kegiatan
+    query = "SELECT dokumen.kode_kec, kecamatan.nama AS 'Kec', dokumen.kode_desa, desa.nama AS 'Desa' ,dokumen.kode_sls, sls.nama_x AS 'SLS', dokumen.id_ppl, dokumen.id_pml, dokumen.id_koseka, sensus.total_dokumen, sensus.tgl_pengdok, sensus.penerima_dok, sensus.status_pengdok, sensus.status_edcod, sensus.petugas_edcod, sensus.start_edcod, sensus.end_edcod, sensus.status_entri, sensus.petugas_entri, sensus.tgl_entri FROM `dokumen` INNER JOIN sensus on dokumen.id_kegiatan = sensus.id_kegiatan AND dokumen.id_dok = sensus.id_dok INNER JOIN kecamatan on kecamatan.kode = dokumen.kode_kec INNER JOIN desa on desa.kode = dokumen.kode_desa AND dokumen.kode_kec = desa.kode_kec INNER JOIN sls on sls.kode = dokumen.kode_sls AND sls.kode_desa = dokumen.kode_desa AND sls.kode_kec = dokumen.kode_kec WHERE dokumen.id_kegiatan = '" + id_kegiatan + "' AND sensus.id_kegiatan = '" + id_kegiatan + "' ORDER BY dokumen.kode_kec, dokumen.kode_desa, dokumen.kode_sls ASC;"
+    db.query(query, (err,results) => {
+        if (err) throw err;
+        res.status(200).send(results);
+    });
+})
+
 // API untuk test fungsi (DEVELOPMENT)
 app.post("/test", (req,res) => {
-    res.send(isi_dokumen_sensus("ST2023"));
-    // try {
-    //     query = "SELECT sls.kode AS 'SLS', desa.kode AS 'Desa', kecamatan.kode AS 'Kecamatan' FROM `sls` INNER JOIN desa ON sls.kode_desa = desa.kode AND sls.kode_kec = desa.kode_kec INNER JOIN kecamatan on desa.kode_kec = kecamatan.kode";
-    //     db.query(query, (err,results) => {
-    //         console.log("Panjang Respon : ", results.length);
-    //         res.status(200).send(results);
-    //     })
-    // } catch (error) {
-    //     console.log(error);
-    // }
+
+    
 })
 
 
