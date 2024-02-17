@@ -1,21 +1,50 @@
 const express = require('express');
 var db = require('./dbconn');
+var write_log = require('./writeLog');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const cors = require('cors');
 
 const app = express();
 const port = 3001;
 const secretKey = 'secretKey';
 const salt = 10
 
+const now = new Date();
+
+// Mendapatkan informasi tanggal dan waktu sekarang
+const year = now.getFullYear(); // Tahun (misal: 2024)
+const month = now.getMonth() + 1; // Bulan (0-11, tambahkan 1 untuk mendapatkan bulan 1-12)
+const day = now.getDate(); // Tanggal (1-31)
+const hours = now.getHours(); // Jam (0-23)
+const minutes = now.getMinutes(); // Menit (0-59)
+const seconds = now.getSeconds(); // Detik (0-59)
+
+// Membuat string untuk menampilkan waktu sekarang
+const currentTime = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+
+////////////////////////////////////////////////////////////////////
+// ENTRI POINT
+////////////////////////////////////////////////////////////////////
+
+
+// app.use(function(req, res, next) {
+//     res.header("Access-Control-Allow-Origin", "http://localhost:3000");
+//     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+//     next();
+//   });
+
+app.use(cors());
+
 
 ////////////////////////////////////////////////////////////////////
 //FUNCTION
 ////////////////////////////////////////////////////////////////////
 
-// MASI BELUM BISA DIPAKAI
 // Fungsi untuk check username, biar nanti lebih mudah
 function check_username(username) {
     return new Promise((resolve, reject) => {
@@ -33,8 +62,19 @@ function check_username(username) {
     }); 
 }
 
-function users_log_activiy(username, activity) {
-    
+function users_log_activiy(username, activity, information = "-") {
+    // List Activity User : 
+    // LOGIN, LOGOUT, REGISTER NEW USER, ADD KEGIATAN, ]
+    // HAPUS KEGIATAN, HAPUS USER
+    try {
+        query = "INSERT INTO `users_activity`( `username`, `last_activity`, `Keterangan` ) VALUES ('" + username + "','" + activity + "','" + information + "')"
+        db.query(query, (err,results) => {
+            if (err) throw err;
+
+        });
+    } catch (error) {
+        return "ERROR";
+    }
 }
 
 function set_login(username) {
@@ -44,19 +84,78 @@ function set_login(username) {
         db.query(query, (err,results) => {
             if (err) throw err;
 
-            // ATUR SESSION DISINI
+            // BUAT SESSION DISINI
 
             // Masukan kedalam Log
         });
+        users_log_activiy(username, "LOG_IN")
     } catch (error) {
         return "Gagal tersambung";
     }
-    
+}
 
+function set_logout(username) {
+    try {
+        // Destroy Session
+        users_log_activiy(username,"LOG_OUT");
+    } catch (error) {
+        
+    }
+}
+
+// Fungsi untuk mengisi dokumen ketika sensus dimulai
+function isi_dokumen_sensus(id_kegiatan) {
+    try {
+        
+        get_kode_daerah((err, results) => {
+            if (err) {
+                console.log("Terjadi kesalahan:", err);
+                return;
+            }
+            const kode_daerah = results
+            // generate query
+            the_query = "INSERT INTO `dokumen`(`id_kegiatan`, `id_dok`, `kode_sls`, `kode_desa`, `kode_kec`, `id_ppl`, `id_pml`, `id_koseka`, `jenis`) VALUES "
+            // id_dok start from 1
+
+            kode_daerah.forEach((item,index) => {
+                p = index + 1
+                if (p != kode_daerah.length){
+                    q = "('" + id_kegiatan +"','" + p +"','" + item.SLS + "','" + item.Desa + "','" + item.Kec + "','-','-','-','1'),";
+                    the_query += q;
+                }else{
+                    q = "('" + id_kegiatan +"','" + p +"','" + item.SLS + "','" + item.Desa + "','" + item.Kec + "','-','-','-','1')";
+                    the_query += q;
+                }
+                
+            });
+            the_query += ";";
+            console.log(the_query);
+
+        });
+
+    } catch (error) {
+        
+    }
+}
+
+// Mendapatkan seluruh kode sls,desa dan kecamatan
+function get_kode_daerah(callback) {
+    
+    try {
+        query = "SELECT sls.kode AS 'SLS', desa.kode AS 'Desa', kecamatan.kode AS 'Kec' FROM `sls` INNER JOIN desa ON sls.kode_desa = desa.kode AND sls.kode_kec = desa.kode_kec INNER JOIN kecamatan on desa.kode_kec = kecamatan.kode";
+        db.query(query, (err,results) => {
+            if (err) {
+                callback(err, null);
+                return;
+            }
+            callback(null, results);
+        })
+    } catch (error) {
+        console.log(error);
+    }
 }
 
 // Autentikasi User di cek menggunakan fungsi ini
-// Contoh middleware untuk verifikasi token
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -166,6 +265,7 @@ app.post("/login", (req,res) => {
                             // TOKEN
                             const token = jwt.sign(info,secretKey);
                             console.log("Login berhasil");
+                            set_login(info.username);
                             res.status(200).json({
                                 accessToken : token
                             })
@@ -178,6 +278,17 @@ app.post("/login", (req,res) => {
         });
     } catch (error) {
         res.status(500).send("Terjadi Kesalahan")
+    }
+});
+
+// API Log Out
+app.post("/logout",(req,res) => {
+    try {
+        const info = req.user;
+        const username = info.username;
+        set_logout(username);
+    } catch (error) {
+        return "ERROR";
     }
 });
 
@@ -229,7 +340,6 @@ app.post("/update_kegiatan", (req,res) => {
 
 app.post("/delete_user/:usrnm", authenticateToken, (req,res) =>{
 
-    // Autentikasi User
     try {
         const usrnm = req.params.usrnm;
         query = "DELETE FROM `users` WHERE username = '" + usrnm + "';";
@@ -275,7 +385,30 @@ app.post("/get_all_mitra", (req,res) => {
     })
 })
 
+app.post("/get_info/:id", (req,res) => {
+    const id = req.params.id;
+    query = "SELECT * FROM `kegiatan` WHERE id = '" + id + "';";
+    db.query(query, (err,results) => {
+        if (err) throw err;
+        res.status(200).send(results);
+    })
+})
+
+// API untuk test fungsi (DEVELOPMENT)
+app.post("/test", (req,res) => {
+    res.send(isi_dokumen_sensus("ST2023"));
+    // try {
+    //     query = "SELECT sls.kode AS 'SLS', desa.kode AS 'Desa', kecamatan.kode AS 'Kecamatan' FROM `sls` INNER JOIN desa ON sls.kode_desa = desa.kode AND sls.kode_kec = desa.kode_kec INNER JOIN kecamatan on desa.kode_kec = kecamatan.kode";
+    //     db.query(query, (err,results) => {
+    //         console.log("Panjang Respon : ", results.length);
+    //         res.status(200).send(results);
+    //     })
+    // } catch (error) {
+    //     console.log(error);
+    // }
+})
+
 
 //END OF POST//////////////////////////////////////////////////
-
-app.listen(port, () => console.log(`Program berjalan di http://localhost:${port}`))
+write_log(`Program berjalan di http://localhost:${port}, time : ${currentTime}`);
+app.listen(port, () => console.log(`Program berjalan di http://localhost:${port}, time : ${currentTime}`));

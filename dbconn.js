@@ -4,7 +4,7 @@ var con = mysql.createConnection({
     host : "localhost",
     user: "root",
     password: "",
-    database: 'for_test_kueri'
+    database: 'backup'
 });
 
 con.connect(function(err){

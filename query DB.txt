@@ -1,11 +1,13 @@
 /////////////////////////////////
 MENDAPATKAN KODE KECAMATAN - SLS
 ---------------------------------
-SELECT kecamatan.kode AS "Kode Kecamatan", kecamatan.nama AS "Kecamatan", desa.kode AS "Kode Desa" , desa.nama AS "Desa" , sls.kode AS "Kode SLS", sls.nama_x AS "Nama SLS"
-FROM desa
-INNER JOIN kecamatan ON desa.kode_kec = kecamatan.kode
-INNER JOIN x ON desa.kode = x.kode_desa
-INNER JOIN sls ON x.nama = sls.nama_x;
+SELECT sls.kode AS 'KODE SLS', sls.nama_x AS 'Nama SLS', desa.kode AS 'Kode Desa', desa.nama AS 'Desa', kecamatan.kode AS 'Kode Kecamatan', kecamatan.nama AS 'Kecamatan'
+FROM `sls`
+
+INNER JOIN desa ON sls.kode_desa = desa.kode AND sls.kode_kec = desa.kode_kec
+INNER JOIN kecamatan on desa.kode_kec = kecamatan.kode
+
+;
 
 /////////////////////////////////
 
