@@ -45,3 +45,14 @@ Program berjalan di http://localhost:3001, time : 17/2/2024 16:13:18.
 Program berjalan di http://localhost:3001, time : 17/2/2024 17:7:4.
 Program berjalan di http://localhost:3001, time : 17/2/2024 17:23:31.
 Program berjalan di http://localhost:3001, time : 17/2/2024 18:8:39.
+Program berjalan di http://localhost:3001, time : 18/2/2024 8:28:22.
+Program berjalan di http://localhost:3001, time : 18/2/2024 8:29:44.
+Program berjalan di http://localhost:3001, time : 18/2/2024 8:48:32.
+Program berjalan di http://localhost:3001, time : 18/2/2024 14:14:45.
+Program berjalan di http://localhost:3001, time : 18/2/2024 14:14:53.
+Program berjalan di http://localhost:3001, time : 18/2/2024 20:25:13.
+Program berjalan di http://localhost:3001, time : 18/2/2024 20:51:59.
+Program berjalan di http://localhost:3001, time : 18/2/2024 20:53:3.
+Program berjalan di http://localhost:3001, time : 18/2/2024 21:2:9.
+Program berjalan di http://localhost:3001, time : 18/2/2024 21:4:36.
+Program berjalan di http://localhost:3001, time : 18/2/2024 21:14:24.

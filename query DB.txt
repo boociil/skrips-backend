@@ -78,29 +78,27 @@ WHERE dokumen.id_kegiatan = 'ST2023' AND koseka.id_kegiatan = 'ST2023' AND pml.i
 ---------------------------------
 MENDAPATKAN INFORMASI PENGOLAHAN SUATU KEGIATAN
 (Ganti id kegiatan, dan join dengan tabel ppl,pml dan koseka)
-
-SELECT dokumen.kode_kec, dokumen.kode_desa, dokumen.kode_sls, dokumen.id_ppl, dokumen.id_pml, dokumen.id_koseka, sensus.total_dokumen, sensus.tgl_pengdok, sensus.penerima_dok, sensus.status_pengdok, sensus.status_edcod, sensus.petugas_edcod, sensus.start_edcod, sensus.end_edcod, sensus.status_entri, sensus.petugas_entri, sensus.tgl_entri
-FROM `dokumen` 
-
-INNER JOIN sensus on dokumen.id_kegiatan = sensus.id_kegiatan AND dokumen.id_dok = sensus.id_dok
-
-WHERE dokumen.id_kegiatan = 'ST2023' AND sensus.id_kegiatan = 'ST2023'
-
-ORDER BY dokumen.kode_kec, dokumen.kode_desa, dokumen.kode_sls ASC
-
-;
-/////////////////////////////////
-
-
-SELECT dokumen.kode_kec, kecamatan.nama ,dokumen.kode_desa, desa.nama, dokumen.kode_sls, sls.nama_x , dokumen.id_ppl, dokumen.id_pml, dokumen.id_koseka, sensus.total_dokumen, sensus.tgl_pengdok, sensus.penerima_dok, sensus.status_pengdok, sensus.status_edcod, sensus.petugas_edcod, sensus.start_edcod, sensus.end_edcod, sensus.status_entri, sensus.petugas_entri, sensus.tgl_entri 
+SELECT dokumen.kode_kec, kecamatan.nama AS 'Kec', dokumen.kode_desa, desa.nama AS 'Desa' ,dokumen.kode_sls, sls.nama_x AS 'SLS', dokumen.id_ppl, dokumen.id_pml, dokumen.id_koseka, sensus.total_dokumen, sensus.tgl_pengdok, sensus.penerima_dok, sensus.status_pengdok, sensus.status_edcod, sensus.petugas_edcod, sensus.start_edcod, sensus.end_edcod, sensus.status_entri, sensus.petugas_entri, sensus.tgl_entri 
 FROM `dokumen` 
 
 INNER JOIN sensus on dokumen.id_kegiatan = sensus.id_kegiatan AND dokumen.id_dok = sensus.id_dok 
-INNER JOIN kecamatan on kecamatan.kode = dokumen.kode_kec
-INNER JOIN desa on desa.kode = dokumen.kode_desa
-INNER JOIN sls on sls.nama_x = dokumen.kode_sls
+INNER JOIN kecamatan on kecamatan.kode = dokumen.kode_kec 
+INNER JOIN desa on desa.kode = dokumen.kode_desa AND dokumen.kode_kec = desa.kode_kec 
+INNER JOIN sls on sls.kode = dokumen.kode_sls AND sls.kode_desa = dokumen.kode_desa AND sls.kode_kec = dokumen.kode_kec 
 
 WHERE dokumen.id_kegiatan = 'ST2023' AND sensus.id_kegiatan = 'ST2023' 
 
-ORDER BY dokumen.kode_kec, dokumen.kode_desa, dokumen.kode_sls ASC
-;
+ORDER BY dokumen.kode_kec, dokumen.kode_desa, dokumen.kode_sls ASC;
+
+/////////////////////////////////
+Mengubah tabel sensus untuk RB
+---------------------------------
+
+UPDATE `sensus` 
+SET `status_pengdok` = '1', `tgl_pengdok` = '2024-02-18 20:36:19', `penerima_dok` = 'opss3'
+
+WHERE `sensus`.`id_kegiatan` = 'ST2023' AND `sensus`.`id_dok` = '1';
+
+/////////////////////////////////
+Mengubah tabel sensus untuk Edcod
+---------------------------------

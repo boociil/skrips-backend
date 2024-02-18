@@ -445,6 +445,18 @@ app.post("/get_pengolahan_data/:id_kegiatan", (req,res) => {
     });
 })
 
+// API untuk mengubah isian tabel sensus kolom RB
+app.post("/update_RB", (req,res) => {
+    const { id_kegiatan, id_dok, status_pengdok , tgl_pengdok, penerima_dok } = req.body;
+    const tgl = new Date(tgl_pengdok);
+    query = "UPDATE `sensus` SET `status_pengdok` = '" + status_pengdok + "', `tgl_pengdok` = '" + tgl_pengdok + "', `penerima_dok` = '" + penerima_dok + "' WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "';";
+    db.query(query, (err,results) => {
+        if (err) throw err;
+        res.status(200).send("Update Berhasil");
+    })
+    console.log(id_kegiatan,status_pengdok,tgl_pengdok,penerima_dok,id_dok);
+})
+
 // API untuk test fungsi (DEVELOPMENT)
 app.post("/test", (req,res) => {
 
