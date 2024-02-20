@@ -359,6 +359,33 @@ app.post("/get_all_kegiatan", (req,res) => {
     })
 })
 
+// mendapatkan semua anggota ipds
+app.post("/get_all_admin", (req,res) => {
+    query = "SELECT username,lastName,firstName FROM `users` WHERE role = 'admin';";
+    db.query(query, (err,results) => {
+        if (err) throw err;
+        res.status(200).send(results);
+    })
+})
+
+// mendapatkan semua mitra edcod
+app.post("/get_all_mitra_edcod", (req,res) => {
+    query = "SELECT * FROM `mitra` WHERE status = 'Editing';";
+    db.query(query, (err,results) => {
+        if (err) throw err;
+        res.status(200).send(results);
+    })
+})
+
+// mendapatkan semua mitra edcod
+app.post("/get_all_mitra_entri", (req,res) => {
+    query = "SELECT * FROM `mitra` WHERE status = 'Entri';";
+    db.query(query, (err,results) => {
+        if (err) throw err;
+        res.status(200).send(results);
+    })
+})
+
 app.post("/get_all_mitra", (req,res) => {
     query = "SELECT nama,status,start_contract, end_contract FROM `mitra`;";
     db.query(query, (err,results) => {
@@ -438,7 +465,7 @@ app.post("/fill/:id_kegiatan",(req,res) => {
 // API untuk mendapatkan kode wilayah, dan status pengolahan sensus, parameter : id_kegiatan (id kegiatan sensus)
 app.post("/get_pengolahan_data/:id_kegiatan", (req,res) => {
     id_kegiatan = req.params.id_kegiatan
-    query = "SELECT dokumen.kode_kec, kecamatan.nama AS 'Kec', dokumen.kode_desa, desa.nama AS 'Desa' ,dokumen.kode_sls, sls.nama_x AS 'SLS', dokumen.id_ppl, dokumen.id_pml, dokumen.id_koseka, sensus.total_dokumen, sensus.tgl_pengdok, sensus.penerima_dok, sensus.status_pengdok, sensus.status_edcod, sensus.petugas_edcod, sensus.start_edcod, sensus.end_edcod, sensus.status_entri, sensus.petugas_entri, sensus.tgl_entri FROM `dokumen` INNER JOIN sensus on dokumen.id_kegiatan = sensus.id_kegiatan AND dokumen.id_dok = sensus.id_dok INNER JOIN kecamatan on kecamatan.kode = dokumen.kode_kec INNER JOIN desa on desa.kode = dokumen.kode_desa AND dokumen.kode_kec = desa.kode_kec INNER JOIN sls on sls.kode = dokumen.kode_sls AND sls.kode_desa = dokumen.kode_desa AND sls.kode_kec = dokumen.kode_kec WHERE dokumen.id_kegiatan = '" + id_kegiatan + "' AND sensus.id_kegiatan = '" + id_kegiatan + "' ORDER BY dokumen.kode_kec, dokumen.kode_desa, dokumen.kode_sls ASC;"
+    query = "SELECT dokumen.id_dok, dokumen.kode_kec, kecamatan.nama AS 'Kec', dokumen.kode_desa, desa.nama AS 'Desa' ,dokumen.kode_sls, sls.nama_x AS 'SLS', dokumen.id_ppl, dokumen.id_pml, dokumen.id_koseka, sensus.total_dokumen, sensus.tgl_pengdok, sensus.penerima_dok, sensus.status_pengdok, sensus.status_edcod, sensus.petugas_edcod, sensus.start_edcod, sensus.end_edcod, sensus.status_entri, sensus.petugas_entri, sensus.tgl_entri FROM `dokumen` INNER JOIN sensus on dokumen.id_kegiatan = sensus.id_kegiatan AND dokumen.id_dok = sensus.id_dok INNER JOIN kecamatan on kecamatan.kode = dokumen.kode_kec INNER JOIN desa on desa.kode = dokumen.kode_desa AND dokumen.kode_kec = desa.kode_kec INNER JOIN sls on sls.kode = dokumen.kode_sls AND sls.kode_desa = dokumen.kode_desa AND sls.kode_kec = dokumen.kode_kec WHERE dokumen.id_kegiatan = '" + id_kegiatan + "' AND sensus.id_kegiatan = '" + id_kegiatan + "' ORDER BY dokumen.kode_kec, dokumen.kode_desa, dokumen.kode_sls ASC;"
     db.query(query, (err,results) => {
         if (err) throw err;
         res.status(200).send(results);
@@ -448,14 +475,46 @@ app.post("/get_pengolahan_data/:id_kegiatan", (req,res) => {
 // API untuk mengubah isian tabel sensus kolom RB
 app.post("/update_RB", (req,res) => {
     const { id_kegiatan, id_dok, status_pengdok , tgl_pengdok, penerima_dok } = req.body;
-    const tgl = new Date(tgl_pengdok);
-    query = "UPDATE `sensus` SET `status_pengdok` = '" + status_pengdok + "', `tgl_pengdok` = '" + tgl_pengdok + "', `penerima_dok` = '" + penerima_dok + "' WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "';";
+    console.log(req.body);
+    let query = ''
+    if (penerima_dok === undefined){
+        query = "UPDATE `sensus` SET `status_pengdok` = '" + status_pengdok + "', `tgl_pengdok` = '" + tgl_pengdok + "' WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "';";
+    }else{
+        query = "UPDATE `sensus` SET `status_pengdok` = '" + status_pengdok + "', `tgl_pengdok` = '" + tgl_pengdok + "', `penerima_dok` = '" + penerima_dok + "' WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "';";
+    }
+    
     db.query(query, (err,results) => {
         if (err) throw err;
         res.status(200).send("Update Berhasil");
     })
     console.log(id_kegiatan,status_pengdok,tgl_pengdok,penerima_dok,id_dok);
 })
+
+// API untuk mengubah isian tabel sensus kolom Edcod
+app.post("/update_Edcod", (req,res) => {
+    const { id_kegiatan, id_dok, status_edcod , start_edcod, end_edcod, petugas_edcod } = req.body;
+    console.log(req.body);
+    query = "UPDATE `sensus` SET `status_edcod` = '" + status_edcod + "', `start_edcod` = '" + start_edcod + "', `end_edcod` = '" + end_edcod + "', `petugas_edcod` = '" + petugas_edcod + "' WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "'";
+    db.query(query, (err,results) => {
+        if (err) throw err;
+        res.status(200).send("Update Berhasil");
+    })
+    console.log(id_kegiatan,id_dok, status_edcod, start_edcod, end_edcod, petugas_edcod);
+})
+
+// API untuk mengubah isian tabel sensus kolom Entri
+app.post("/update_Entri", (req,res) => {
+    const { id_kegiatan, id_dok, status_entri , tgl_entri, petugas_entri } = req.body;
+    console.log(req.body);
+    query = "UPDATE `sensus` SET `status_entri` = '" + status_entri + "', `tgl_entri` = '" + tgl_entri + "', `petugas_entri` = '" + petugas_entri + "' WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "';";
+    db.query(query, (err,results) => {
+        if (err) throw err;
+        res.status(200).send("Update Berhasil");
+    })
+    console.log(query);
+    console.log(id_kegiatan,status_entri,tgl_entri,petugas_entri,id_dok);
+})
+
 
 // API untuk test fungsi (DEVELOPMENT)
 app.post("/test", (req,res) => {
