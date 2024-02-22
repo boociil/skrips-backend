@@ -472,6 +472,15 @@ app.post("/get_pengolahan_data/:id_kegiatan", (req,res) => {
     });
 })
 
+// API untuk mendapatkan seluruh SLS (Digunakan untuk memilih sampel dari seluruh SLS yang ada)
+app.post("/get_sls",(req,res) => {
+    query = "SELECT x.id AS 'id', x.nama AS 'Korong', desa.kode AS 'kode_desa', desa.nama AS 'Desa', kecamatan.kode AS 'kode_kec', kecamatan.nama AS 'Kec' FROM `x` INNER JOIN desa ON x.kode_desa = desa.kode AND x.kode_kec = desa.kode_kec INNER JOIN kecamatan on x.kode_kec = kecamatan.kode ORDER BY kode_kec, kode_desa;"
+    db.query(query, (err,results) => {
+        if (err) throw err;
+        res.status(200).send(results);
+    })
+})
+
 // API untuk mengubah isian tabel sensus kolom RB
 app.post("/update_RB", (req,res) => {
     const { id_kegiatan, id_dok, status_pengdok , tgl_pengdok, penerima_dok } = req.body;
