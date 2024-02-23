@@ -403,6 +403,66 @@ app.post("/get_info/:id", (req,res) => {
     })
 })
 
+// // API untuk mengisi tabel dokumen dan sensus, parameter : id_kegiatan (id kegiatan sensus)
+app.post("/fill_survei/:id_kegiatan",(req,res) => {
+    
+    id_kegiatan = req.params.id_kegiatan;
+    
+    try {
+
+        const data = req.body
+
+        nothing_in_db(id_kegiatan, (err, hasil) => {
+            if (err) {
+                console.error("Terjadi kesalahan:", err);
+                return;
+            }
+
+            if (hasil){
+                get_kode_daerah((err, results) => {
+                    if (err) {
+                        console.log("Terjadi kesalahan:", err);
+                        return;
+                    }
+                    const kode_daerah = results
+                    // generate query
+                    the_query = "INSERT INTO `dokumen`(`id_kegiatan`, `id_dok`, `kode_sls`, `kode_desa`, `kode_kec`, `id_ppl`, `id_pml`, `id_koseka`, `jenis`) VALUES "
+                    the_query_2 = "INSERT INTO `survei`(`id_kegiatan`, `id_dok`, `no_blok_sensus`, `no_kerangka_sampel`, `no_ruta`, `KRT`) VALUES ('[value-1]','[value-2]','[value-3]','[value-4]','[value-5]')"
+                    
+                    // id_dok start from 1
+                    for (let key in data){
+                        console.log("Key : ", key);
+                        console.log("noKS : ", data[key]["noKS"]);
+                        console.log("noBS : ", data[key]["noBS"]);
+                        console.log("jumlah ruta : ", data[key]["jumlah_ruta"])
+                        for (let the_key in data[key]["krt"]){
+                            console.log("Ruta ", the_key , " : ", data[key]["krt"][the_key]);
+                        }
+                    }
+
+
+                    the_query += ";";
+                    the_query_2 += ";";
+                    // db.query(the_query, (err, results) =>{
+                    //     if (err) throw err;
+                    // })
+                    // db.query(the_query_2, (err, results) =>{
+                    //     if (err) throw err;
+                    // })
+                    res.status(200).send("Berhasil");
+                });
+            }else{
+                // jika kegiatan sudah ada di dalam tabel dokumen
+                res.status(400).send("Kegiatan sudah ada");
+            }
+        });
+
+    } catch (error) {
+        
+    }
+})
+
+
 // API untuk mengisi tabel dokumen dan sensus, parameter : id_kegiatan (id kegiatan sensus)
 app.post("/fill/:id_kegiatan",(req,res) => {
     
