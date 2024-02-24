@@ -104,7 +104,19 @@ function set_logout(username) {
     }
 }
 
-//
+// fungsi untuk mengecek apakah id kegiatan sudah ada di tabel database
+// Penggunaan : 
+// nothing_in_db(id_kegiatan, (err, hasil) => {
+//     if (err) {
+//         console.error("Terjadi kesalahan:", err);
+//         return;
+//     }
+
+//     if (hasil){
+//     
+//      * JIKA KEGIATAN TIDAK ADA DI DATABASE, MAKA LAKUKAN SESUATU DISINI
+//  
+//      }
 function nothing_in_db(id_kegiatan, callback) {   
     query = "SELECT * FROM `dokumen` WHERE id_kegiatan = '" + id_kegiatan + "' LIMIT 10 ;";
     let hasil = false;
@@ -137,7 +149,7 @@ function get_kode_daerah(callback) {
     }
 }
 
-// Autentikasi User di cek menggunakan fungsi ini
+// Autentikasi User (Admin) di cek menggunakan fungsi ini
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -403,7 +415,7 @@ app.post("/get_info/:id", (req,res) => {
     })
 })
 
-// // API untuk mengisi tabel dokumen dan sensus, parameter : id_kegiatan (id kegiatan sensus)
+// API untuk mengisi tabel dokumen dan surve, parameter : id_kegiatan (id kegiatan survei)
 app.post("/fill_survei/:id_kegiatan",(req,res) => {
     
     id_kegiatan = req.params.id_kegiatan;
@@ -426,29 +438,45 @@ app.post("/fill_survei/:id_kegiatan",(req,res) => {
                     }
                     const kode_daerah = results
                     // generate query
-                    the_query = "INSERT INTO `dokumen`(`id_kegiatan`, `id_dok`, `kode_sls`, `kode_desa`, `kode_kec`, `id_ppl`, `id_pml`, `id_koseka`, `jenis`) VALUES "
-                    the_query_2 = "INSERT INTO `survei`(`id_kegiatan`, `id_dok`, `no_blok_sensus`, `no_kerangka_sampel`, `no_ruta`, `KRT`) VALUES ('[value-1]','[value-2]','[value-3]','[value-4]','[value-5]')"
+                    the_query = "INSERT INTO `dokumen`(`id_kegiatan`, `id_dok`, `kode_sls`, `id_x`, `kode_desa`, `kode_kec`, `id_ppl`, `id_pml`, `id_koseka`, `jenis`) VALUES "
+                    the_query_2 = "INSERT INTO `survei`(`id_kegiatan`, `id_dok`, `no_blok_sensus`, `no_kerangka_sampel`, `no_ruta`, `KRT`) VALUES "
                     
                     // id_dok start from 1
+                    let id_dok = 1
+
                     for (let key in data){
-                        console.log("Key : ", key);
-                        console.log("noKS : ", data[key]["noKS"]);
-                        console.log("noBS : ", data[key]["noBS"]);
-                        console.log("jumlah ruta : ", data[key]["jumlah_ruta"])
+                        // console.log("Key : ", key);
+                        // console.log("kode_desa : ", data[key]["kode_desa"]);
+                        // console.log("kode_kec : ", data[key]["kode_kec"]);
+                        // console.log("noKS : ", data[key]["noKS"]);
+                        // console.log("noBS : ", data[key]["noBS"]);
+                        // console.log("jumlah ruta : ", data[key]["jumlah_ruta"])
+
+                        the_query += "('" + id_kegiatan + "', '" + id_dok + "', '000100','"+ key +"', '"+ data[key]["kode_desa"] +"', '" + data[key]["kode_kec"] +"', '-', '-', '-', '2'),"
+
+                        let no_ruta = 1
                         for (let the_key in data[key]["krt"]){
-                            console.log("Ruta ", the_key , " : ", data[key]["krt"][the_key]);
+                            // console.log("Ruta ", the_key , " : ", data[key]["krt"][the_key]);
+                            the_query_2 += "('"+ id_kegiatan +"', '" + id_dok + "', '" + data[key]["noBS"] +"', '"+ data[key]["noKS"] + "', '" + no_ruta + "', '" + data[key]["krt"][the_key] +"'),"
+                            no_ruta += 1
                         }
+                        id_dok += 1
                     }
 
+                    the_query = the_query.slice(0,-1)
+                    the_query_2 = the_query_2.slice(0,-1)
 
                     the_query += ";";
                     the_query_2 += ";";
-                    // db.query(the_query, (err, results) =>{
-                    //     if (err) throw err;
-                    // })
-                    // db.query(the_query_2, (err, results) =>{
-                    //     if (err) throw err;
-                    // })
+
+                    console.log(the_query);
+                    console.log(the_query_2);
+                    db.query(the_query, (err, results) =>{
+                        if (err) throw err;
+                    })
+                    db.query(the_query_2, (err, results) =>{
+                        if (err) throw err;
+                    })
                     res.status(200).send("Berhasil");
                 });
             }else{
@@ -464,7 +492,7 @@ app.post("/fill_survei/:id_kegiatan",(req,res) => {
 
 
 // API untuk mengisi tabel dokumen dan sensus, parameter : id_kegiatan (id kegiatan sensus)
-app.post("/fill/:id_kegiatan",(req,res) => {
+app.post("/fill_sensus/:id_kegiatan",(req,res) => {
     
     id_kegiatan = req.params.id_kegiatan;
     try {
@@ -532,7 +560,18 @@ app.post("/get_pengolahan_data/:id_kegiatan", (req,res) => {
     });
 })
 
-// API untuk mendapatkan seluruh SLS (Digunakan untuk memilih sampel dari seluruh SLS yang ada)
+
+// API untuk mendapatkan kode wilayah, dan status pengolahan sensus, parameter : id_kegiatan (id kegiatan survei)
+app.post("/get_pengolahan_data_survei/:id_kegiatan", (req,res) => {
+    id_kegiatan = req.params.id_kegiatan
+    query = "SELECT dokumen.id_dok, dokumen.kode_kec, kecamatan.nama AS 'Kec', dokumen.kode_desa, desa.nama AS 'Desa' , dokumen.id_x AS 'id_x' , x.nama AS 'nama_x', survei.no_blok_sensus, survei.KRT, survei.no_kerangka_sampel , survei.no_ruta AS 'no_ruta', dokumen.id_ppl, dokumen.id_pml, dokumen.id_koseka, survei.tgl_pengdok, survei.penerima_dok, survei.status_pengdok, survei.status_edcod, survei.petugas_edcod, survei.tgl_edcod, survei.status_entri, survei.petugas_entri, survei.moda_entri, survei.tgl_entri FROM dokumen INNER JOIN kecamatan on kecamatan.kode = dokumen.kode_kec INNER JOIN desa on desa.kode = dokumen.kode_desa AND dokumen.kode_kec = desa.kode_kec INNER JOIN x on x.id = dokumen.id_x AND x.kode_desa = dokumen.kode_desa AND x.kode_kec = dokumen.kode_kec INNER JOIN survei on dokumen.id_kegiatan = survei.id_kegiatan AND dokumen.id_dok = survei.id_dok WHERE dokumen.id_kegiatan = '" + id_kegiatan + "' AND survei.id_kegiatan = '" + id_kegiatan + "';"
+    db.query(query, (err,results) => {
+        if (err) throw err;
+        res.status(200).send(results);
+    });
+})
+
+// API untuk mendapatkan seluruh Korong (Digunakan untuk memilih sampel dari seluruh SLS yang ada)
 app.post("/get_sls",(req,res) => {
     query = "SELECT x.id AS 'id', x.nama AS 'Korong', desa.kode AS 'kode_desa', desa.nama AS 'Desa', kecamatan.kode AS 'kode_kec', kecamatan.nama AS 'Kec' FROM `x` INNER JOIN desa ON x.kode_desa = desa.kode AND x.kode_kec = desa.kode_kec INNER JOIN kecamatan on x.kode_kec = kecamatan.kode ORDER BY kode_kec, kode_desa;"
     db.query(query, (err,results) => {
