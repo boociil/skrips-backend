@@ -580,6 +580,57 @@ app.post("/get_sls",(req,res) => {
     })
 })
 
+// API untuk mengubah isian tabel survei kolom RB
+app.post("/update_RB_survei", (req,res) => {
+    const {id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_pengdok, penerima_dok, status_pengdok } = req.body;
+    console.log(id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_pengdok, penerima_dok, status_pengdok);
+    let query = ''
+    if (penerima_dok !== undefined){
+        query = "UPDATE `survei` SET `status_pengdok` = '" + status_pengdok +"', `tgl_pengdok` = '" + tgl_pengdok +"', `penerima_dok` = '" + penerima_dok +"' WHERE `survei`.`id_kegiatan` = '" + id_kegiatan +"' AND `survei`.`no_blok_sensus` = '" + no_blok_sensus +"' AND `survei`.`no_kerangka_sampel` = '" + no_kerangka_sampel +"' AND `survei`.`no_ruta` = '" + no_ruta +"';"
+    }else{
+        query = "UPDATE `survei` SET `status_pengdok` = NULL, `tgl_pengdok` = NULL , `penerima_dok` = NULL WHERE `survei`.`id_kegiatan` = '" + id_kegiatan +"' AND `survei`.`no_blok_sensus` = '" + no_blok_sensus +"' AND `survei`.`no_kerangka_sampel` = '" + no_kerangka_sampel +"' AND `survei`.`no_ruta` = '" + no_ruta +"';"
+    }
+    console.log(query);
+    db.query(query, (err,results) => {
+        if (err) throw err;
+        res.status(200).send("Update Berhasil");
+    })
+})
+
+// API untuk mengubah isian tabel survei kolom Edcod
+app.post("/update_Edcod_survei", (req,res) => {
+    const {id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_edcod, petugas_edcod, status_edcod } = req.body;
+    console.log(id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_edcod, petugas_edcod, status_edcod);
+    let query = ''
+    if (petugas_edcod !== undefined){
+        query = "UPDATE `survei` SET `status_edcod` = '" + status_edcod +"', `tgl_edcod` = '" + tgl_edcod +"', `petugas_edcod` = '" + petugas_edcod +"' WHERE `survei`.`id_kegiatan` = '" + id_kegiatan +"' AND `survei`.`no_blok_sensus` = '" + no_blok_sensus +"' AND `survei`.`no_kerangka_sampel` = '" + no_kerangka_sampel +"' AND `survei`.`no_ruta` = '" + no_ruta +"';"
+    }else{
+        query = "UPDATE `survei` SET `status_edcod` = NULL, `tgl_edcod` = NULL , `petugas_edcod` = NULL WHERE `survei`.`id_kegiatan` = '" + id_kegiatan +"' AND `survei`.`no_blok_sensus` = '" + no_blok_sensus +"' AND `survei`.`no_kerangka_sampel` = '" + no_kerangka_sampel +"' AND `survei`.`no_ruta` = '" + no_ruta +"';"
+    }
+    console.log(query);
+    db.query(query, (err,results) => {
+        if (err) throw err;
+        res.status(200).send("Update Berhasil");
+    })
+})
+
+// API untuk mengubah isian tabel survei kolom Entri
+app.post("/update_Entri_survei", (req,res) => {
+    const {id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_entri, petugas_entri, status_entri } = req.body;
+    console.log(id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_entri, petugas_entri, status_entri);
+    let query = ''
+    if (petugas_entri !== undefined){
+        query = "UPDATE `survei` SET `status_entri` = '" + status_entri +"', `tgl_entri` = '" + tgl_entri +"', `petugas_entri` = '" + petugas_entri +"' WHERE `survei`.`id_kegiatan` = '" + id_kegiatan +"' AND `survei`.`no_blok_sensus` = '" + no_blok_sensus +"' AND `survei`.`no_kerangka_sampel` = '" + no_kerangka_sampel +"' AND `survei`.`no_ruta` = '" + no_ruta +"';"
+    }else{
+        query = "UPDATE `survei` SET `status_entri` = NULL, `tgl_entri` = NULL , `petugas_entri` = NULL WHERE `survei`.`id_kegiatan` = '" + id_kegiatan +"' AND `survei`.`no_blok_sensus` = '" + no_blok_sensus +"' AND `survei`.`no_kerangka_sampel` = '" + no_kerangka_sampel +"' AND `survei`.`no_ruta` = '" + no_ruta +"';"
+    }
+    console.log(query);
+    db.query(query, (err,results) => {
+        if (err) throw err;
+        res.status(200).send("Update Berhasil");
+    })
+})
+
 // API untuk mengubah isian tabel sensus kolom RB
 app.post("/update_RB", (req,res) => {
     const { id_kegiatan, id_dok, status_pengdok , tgl_pengdok, penerima_dok } = req.body;
