@@ -134,7 +134,6 @@ function nothing_in_db(id_kegiatan, callback) {
 
 // Mendapatkan seluruh kode sls,desa dan kecamatan
 function get_kode_daerah(callback) {
-    
     try {
         query = "SELECT sls.kode AS 'SLS', desa.kode AS 'Desa', kecamatan.kode AS 'Kec' FROM `sls` INNER JOIN desa ON sls.kode_desa = desa.kode AND sls.kode_kec = desa.kode_kec INNER JOIN kecamatan on desa.kode_kec = kecamatan.kode";
         db.query(query, (err,results) => {
@@ -149,6 +148,36 @@ function get_kode_daerah(callback) {
     }
 }
 
+// Fungsi untuk mendapatkan seluruh kecamatan untuk kegiatan Survei
+function get_kec_survei(id_kegiatan, callback) {
+    const query = 'SELECT dokumen.kode_sls AS "kode_sls", dokumen.id_x AS "id_x", dokumen.kode_desa AS "kode_desa", dokumen.kode_kec AS "kode_kec",survei.status_pengdok, survei.status_edcod, survei.status_entri FROM `survei` INNER JOIN dokumen ON survei.id_dok = dokumen.id_dok AND survei.id_kegiatan = dokumen.id_kegiatan WHERE survei.id_kegiatan = ?';
+    // console.log(query);
+    // Jalankan query dengan parameterized query untuk menghindari SQL Injection
+    db.query(query, [id_kegiatan], (err, results) => {
+        if (err) {
+            callback(err, null);
+            return;
+        }
+        callback(null, results);
+    });
+}
+
+// Fungsi untuk mendapatkan seluruh kecamatan untuk kegiatan Sensus
+function get_kec_sensus(id_kegiatan, callback) {
+    const query = 'SELECT dokumen.kode_sls AS "kode_sls", dokumen.id_x AS "id_x", dokumen.kode_desa AS "kode_desa", dokumen.kode_kec AS "kode_kec",sensus.status_pengdok, sensus.status_edcod, sensus.status_entri FROM `sensus` INNER JOIN dokumen ON sensus.id_dok = dokumen.id_dok AND sensus.id_kegiatan = dokumen.id_kegiatan WHERE sensus.id_kegiatan = ?;';
+    console.log(query);
+    // Jalankan query dengan parameterized query untuk menghindari SQL Injection
+    db.query(query, [id_kegiatan], (err, results) => {
+        if (err) {
+            callback(err, null);
+            return;
+        }
+        // console.log(results);
+        callback(null, results);
+    });
+}
+
+
 // Autentikasi User (Admin) di cek menggunakan fungsi ini
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
@@ -159,6 +188,23 @@ function authenticateToken(req, res, next) {
         if (err) return res.sendStatus(403); // Forbidden
         req.user = user;
         if (user.role == 'admin'){
+            next();
+        }else{
+            res.sendStatus(403); // Forbidden
+        }
+    });
+}
+
+// Autentikasi User (Admin) di cek menggunakan fungsi ini
+function authenticateTokenLevel2(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (token == null) return res.sendStatus(401); // Unauthorized
+
+    jwt.verify(token, secretKey, (err, user) => {
+        if (err) return res.sendStatus(403); // Forbidden
+        req.user = user;
+        if (user.role == 'admin' || user.role == 'pengawas'){
             next();
         }else{
             res.sendStatus(403); // Forbidden
@@ -490,6 +536,109 @@ app.post("/fill_survei/:id_kegiatan",(req,res) => {
     }
 })
 
+// API untuk mendapatkan progres per kecamatan
+app.post("/get_progres_kecamatan_sensus/:id",(req,res) => {
+    id_kegiatan = req.params.id;
+    get_kec_sensus(id_kegiatan, (err,results) => {
+        if (err) {
+            console.log("Terjadi kesalahan");
+            res.sendStatus(500);
+        }
+        const data = results;
+        // console.log(results);
+        let data_progres = {}; // inisialisasi objek kosong
+
+        // Iterasi melalui data dan mengisi objek data_progres
+        data.forEach(item => {
+            if (!data_progres[item.kode_kec]) {
+                data_progres[item.kode_kec] = {
+                    rb: 0,
+                    edcod: 0,
+                    entri: 0,
+                    total: 0,
+                    progres_rb : 0,
+                    progres_edcod : 0,
+                    progres_entri : 0,
+                };
+            }
+
+            if (item.status_pengdok === 1) {
+                data_progres[item.kode_kec]["rb"] += 1;
+            }
+            if (item.status_edcod === 1) {
+                data_progres[item.kode_kec]["edcod"] += 1;
+            }
+            if (item.status_entri === 1) {
+                data_progres[item.kode_kec]["entri"] += 1;
+            }
+            data_progres[item.kode_kec]["total"] += 1;
+            data_progres[item.kode_kec]["progres_rb"] = (data_progres[item.kode_kec]["rb"]/data_progres[item.kode_kec]["total"]) * 100;
+            data_progres[item.kode_kec]["progres_edcod"] = (data_progres[item.kode_kec]["edcod"]/data_progres[item.kode_kec]["total"]) * 100;
+            data_progres[item.kode_kec]["progres_entri"] = (data_progres[item.kode_kec]["entri"]/data_progres[item.kode_kec]["total"]) * 100;
+    
+        });
+
+
+        // console.log(data_progres);
+        res.status(200).send(data_progres);
+    });
+});
+
+
+app.post("/get_progres_kecamatan_survei/:id", (req, res) => {
+    id_kegiatan = req.params.id
+    get_kec_survei(id_kegiatan, (err, results) => {
+        if (err) {
+            console.log("Terjadi kesalahan");
+            res.sendStatus(500);
+            return;
+        }
+        
+        const data_progres = results.reduce((acc, item) => {
+            if (!acc[item.kode_kec]) {
+                acc[item.kode_kec] = {
+                    rb: 0,
+                    edcod: 0,
+                    entri: 0,
+                    total: 0,
+                    progres_rb: 0,
+                    progres_edcod: 0,
+                    progres_entri: 0,
+                };
+            }
+
+            acc[item.kode_kec].total++;
+            if (item.status_pengdok === 1) acc[item.kode_kec].rb++;
+            if (item.status_edcod === 1) acc[item.kode_kec].edcod++;
+            if (item.status_entri === 1) acc[item.kode_kec].entri++;
+
+            return acc;
+        }, {});
+
+        // Hitung persentase progres setelah semua data dikumpulkan
+        Object.values(data_progres).forEach(progres => {
+            progres.progres_rb = (progres.rb / progres.total) * 100;
+            progres.progres_edcod = (progres.edcod / progres.total) * 100;
+            progres.progres_entri = (progres.entri / progres.total) * 100;
+        });
+
+        // console.log(data_progres);
+        res.status(200).send(data_progres);
+    });
+});
+
+// API untuk mendapatkan semua users (digunakan untuk assign petugas)
+app.post("/get_all_users", (req,res) => {
+    try {
+        const query = "SELECT `username`, `firstName`, `lastName` FROM `users`;"
+        db.query(query, (err,results) => {
+            if (err) throw err;
+            res.status(200).send(results);
+        })
+    } catch (error) {
+        console.log(error);
+    }
+})
 
 // API untuk mengisi tabel dokumen dan sensus, parameter : id_kegiatan (id kegiatan sensus)
 app.post("/fill_sensus/:id_kegiatan",(req,res) => {
