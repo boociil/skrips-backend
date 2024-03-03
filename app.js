@@ -280,11 +280,14 @@ app.post("/login", (req,res) => {
     try {
 
         const { username, password } = req.body;
-
+        console.log(username,password);
         query = 'SELECT username,firstName,lastName,gender,role,pass FROM `users` WHERE `username`= "' + username + '";';
         db.query(query, (err,results) =>{
             if (!results.length){
-                res.status(400).send("username tidak ditemukan");
+                res.status(400).send({
+                    msg : "Username",
+                    accessToken : "-",
+                });
             }else{
                 let hashed_pass = results[0].pass;
                 bcrypt.compare(password, hashed_pass, function(err,resultss){
@@ -307,10 +310,11 @@ app.post("/login", (req,res) => {
                             console.log("Login berhasil");
                             set_login(info.username);
                             res.status(200).json({
+                                msg:"Success",
                                 accessToken : token
                             })
                         } else {
-                            res.status(200).send("password salah");
+                            res.status(400).send({msg:"Password", accessToken : "-"});
                         }
                     }
                 });
