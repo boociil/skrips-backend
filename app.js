@@ -164,7 +164,7 @@ function get_kec_survei(id_kegiatan, callback) {
 
 // Fungsi untuk mendapatkan seluruh kecamatan untuk kegiatan Sensus
 function get_kec_sensus(id_kegiatan, callback) {
-    const query = 'SELECT dokumen.kode_sls AS "kode_sls", dokumen.id_x AS "id_x", dokumen.kode_desa AS "kode_desa", dokumen.kode_kec AS "kode_kec",sensus.status_pengdok, sensus.status_edcod, sensus.status_entri FROM `sensus` INNER JOIN dokumen ON sensus.id_dok = dokumen.id_dok AND sensus.id_kegiatan = dokumen.id_kegiatan WHERE sensus.id_kegiatan = ?;';
+    const query = 'SELECT dokumen.kode_sls AS "kode_sls", dokumen.id_x AS "id_x", dokumen.kode_desa AS "kode_desa", dokumen.kode_kec AS "kode_kec", kecamatan.nama AS "nama_kec" , sensus.status_pengdok, sensus.status_edcod, sensus.status_entri FROM `sensus` INNER JOIN dokumen ON sensus.id_dok = dokumen.id_dok AND sensus.id_kegiatan = dokumen.id_kegiatan INNER JOIN kecamatan ON dokumen.kode_kec = kecamatan.kode WHERE sensus.id_kegiatan = ? ORDER BY dokumen.kode_kec ASC;';
     console.log(query);
     // Jalankan query dengan parameterized query untuk menghindari SQL Injection
     db.query(query, [id_kegiatan], (err, results) => {
@@ -172,7 +172,7 @@ function get_kec_sensus(id_kegiatan, callback) {
             callback(err, null);
             return;
         }
-        // console.log(results);
+        console.log(results);
         callback(null, results);
     });
 }
@@ -556,6 +556,7 @@ app.post("/get_progres_kecamatan_sensus/:id",(req,res) => {
         data.forEach(item => {
             if (!data_progres[item.kode_kec]) {
                 data_progres[item.kode_kec] = {
+                    nama_kec : "",
                     rb: 0,
                     edcod: 0,
                     entri: 0,
@@ -565,6 +566,8 @@ app.post("/get_progres_kecamatan_sensus/:id",(req,res) => {
                     progres_entri : 0,
                 };
             }
+
+            data_progres[item.kode_kec]["nama_kec"] = item["nama_kec"]
 
             if (item.status_pengdok === 1) {
                 data_progres[item.kode_kec]["rb"] += 1;
@@ -743,7 +746,7 @@ app.post("/update_RB_survei", (req,res) => {
     }else{
         query = "UPDATE `survei` SET `status_pengdok` = NULL, `tgl_pengdok` = NULL , `penerima_dok` = NULL WHERE `survei`.`id_kegiatan` = '" + id_kegiatan +"' AND `survei`.`no_blok_sensus` = '" + no_blok_sensus +"' AND `survei`.`no_kerangka_sampel` = '" + no_kerangka_sampel +"' AND `survei`.`no_ruta` = '" + no_ruta +"';"
     }
-    console.log(query);
+    // console.log(query);
     db.query(query, (err,results) => {
         if (err) throw err;
         res.status(200).send("Update Berhasil");
@@ -760,7 +763,7 @@ app.post("/update_Edcod_survei", (req,res) => {
     }else{
         query = "UPDATE `survei` SET `status_edcod` = NULL, `tgl_edcod` = NULL , `petugas_edcod` = NULL WHERE `survei`.`id_kegiatan` = '" + id_kegiatan +"' AND `survei`.`no_blok_sensus` = '" + no_blok_sensus +"' AND `survei`.`no_kerangka_sampel` = '" + no_kerangka_sampel +"' AND `survei`.`no_ruta` = '" + no_ruta +"';"
     }
-    console.log(query);
+    // console.log(query);
     db.query(query, (err,results) => {
         if (err) throw err;
         res.status(200).send("Update Berhasil");
@@ -777,7 +780,7 @@ app.post("/update_Entri_survei", (req,res) => {
     }else{
         query = "UPDATE `survei` SET `status_entri` = NULL, `tgl_entri` = NULL , `petugas_entri` = NULL WHERE `survei`.`id_kegiatan` = '" + id_kegiatan +"' AND `survei`.`no_blok_sensus` = '" + no_blok_sensus +"' AND `survei`.`no_kerangka_sampel` = '" + no_kerangka_sampel +"' AND `survei`.`no_ruta` = '" + no_ruta +"';"
     }
-    console.log(query);
+    // console.log(query);
     db.query(query, (err,results) => {
         if (err) throw err;
         res.status(200).send("Update Berhasil");
@@ -832,7 +835,7 @@ app.post("/update_Entri", (req,res) => {
     }
 
     console.log(query);
-    console.log(id_kegiatan,status_entri,tgl_entri,petugas_entri,id_dok);
+    // console.log(id_kegiatan,status_entri,tgl_entri,petugas_entri,id_dok);
 
     db.query(query, (err,results) => {
         if (err) throw err;
