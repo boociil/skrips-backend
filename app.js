@@ -634,6 +634,23 @@ app.post("/get_progres_kecamatan_survei/:id", (req, res) => {
     });
 });
 
+// API untuk mendapatkan progres keseluruhan RB, Edcod, dan Entri
+app.post("/get_progres_sensus/:id_kegiatan", (req,res) => {
+    id = req.params.id_kegiatan
+    try {
+        const query = "SELECT (SELECT COUNT(*) FROM sensus WHERE id_kegiatan = 'ST2023' AND status_pengdok = '1') AS rb,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = 'ST2023' AND status_edcod = '1') AS edcod,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = 'ST2023' AND status_entri = '1') AS entri,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = 'ST2023') AS total,(SELECT MIN(tgl_pengdok) AS mulai_pengdok FROM sensus) AS start_pengdok,(SELECT MIN(tgl_edcod) AS mulai_pengdok FROM sensus) AS start_edcod,(SELECT MIN(tgl_entri) AS mulai_pengdok FROM sensus) AS start_entr;"
+        console.log(query);
+        db.query(query, [id,id,id,id], (err,results) => {
+            if(err){
+                throw err;
+            }
+            res.status(200).send(results);
+        })
+    } catch (error) {
+        console.log(error);
+    }
+})
+
 // API untuk mendapatkan semua users (digunakan untuk assign petugas)
 app.post("/get_all_users", (req,res) => {
     try {
@@ -793,7 +810,7 @@ app.post("/update_RB", (req,res) => {
     console.log(req.body);
     let query = ''
     if (penerima_dok === undefined){
-        query = "UPDATE `sensus` SET `status_pengdok` = '" + status_pengdok + "', `tgl_pengdok` = '" + tgl_pengdok + "' WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "';";
+        query = "UPDATE `sensus` SET `status_pengdok` = NULL, `tgl_pengdok` = NULL, `penerima_dok` = NULL WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "';";
     }else{
         query = "UPDATE `sensus` SET `status_pengdok` = '" + status_pengdok + "', `tgl_pengdok` = '" + tgl_pengdok + "', `penerima_dok` = '" + penerima_dok + "' WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "';";
     }
@@ -811,7 +828,7 @@ app.post("/update_Edcod", (req,res) => {
     console.log(req.body);
 
     if (petugas_edcod === undefined){
-        query = "UPDATE `sensus` SET `status_edcod` = '" + status_edcod + "', `tgl_edcod` = '" + tgl_edcod + "' WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "'";
+        query = "UPDATE `sensus` SET `status_edcod` = NULL, `tgl_edcod` = NULL, `petugas_edcod` = NULL WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "'";
     }else{
         query = "UPDATE `sensus` SET `status_edcod` = '" + status_edcod + "', `tgl_edcod` = '" + tgl_edcod + "', `petugas_edcod` = '" + petugas_edcod + "' WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "'";
     }
@@ -825,13 +842,13 @@ app.post("/update_Edcod", (req,res) => {
 
 // API untuk mengubah isian tabel sensus kolom Entri
 app.post("/update_Entri", (req,res) => {
-    const { id_kegiatan, id_dok, status_entri , tgl_entri, petugas_entri } = req.body;
+    const { id_kegiatan, id_dok, status_entri , tgl_entri, petugas_entri, moda } = req.body;
     console.log(req.body);
     let query = ''
     if (petugas_entri === undefined){
-        query = "UPDATE `sensus` SET `status_entri` = '" + status_entri + "', `tgl_entri` = '" + tgl_entri + "' WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "';";
+        query = "UPDATE `sensus` SET `status_entri` = NULL, `tgl_entri` = NULL, `petugas_entri` = NULL, `moda_entri` = NULL WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "';";
     }else{
-        query = "UPDATE `sensus` SET `status_entri` = '" + status_entri + "', `tgl_entri` = '" + tgl_entri + "', `petugas_entri` = '" + petugas_entri + "' WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "';";
+        query = "UPDATE `sensus` SET `status_entri` = '" + status_entri + "', `tgl_entri` = '" + tgl_entri + "', `petugas_entri` = '" + petugas_entri + "', `moda_entri` = '" + moda +"' WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "';";
     }
 
     console.log(query);
