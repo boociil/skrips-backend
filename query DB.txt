@@ -100,5 +100,13 @@ SET `status_pengdok` = '1', `tgl_pengdok` = '2024-02-18 20:36:19', `penerima_dok
 WHERE `sensus`.`id_kegiatan` = 'ST2023' AND `sensus`.`id_dok` = '1';
 
 /////////////////////////////////
-Mengubah tabel sensus untuk Edcod
+
+
+MENDAPATKAN PROGRES PETUGAS
 ---------------------------------
+SELECT penerima_dok, COUNT(penerima_dok) as 'TOTAL'
+FROM survei
+WHERE id_kegiatan = 'Sakernas2020'
+GROUP BY 
+penerima_dok;
+/////////////////////////////////

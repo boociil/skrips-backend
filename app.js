@@ -263,16 +263,58 @@ app.post("/register", authenticateToken, async (req,res) =>{
         //Push ke db
         query = "INSERT INTO `users` (`username`, `firstName`, `lastName`, `pass`, `role`, `status`, `created_at`) VALUES ('" + username + "', '" + firstName + "', '" + lastName + "', '" + hashedPass +"', '" + role + "', '" + status + "', current_timestamp());"
         db.query(query, (err,results) => {
-            if (err) throw err;
-            res.status(403).send(err);
+            if (err){
+                throw err;
+                res.status(403).send(err);
+            } 
+            
         });
 
         res.status(201).send("Berhasil");
     } catch(error){
-        res.status(500).send("Terjadi Kesalahan")
+        // res.status(500).send("Terjadi Kesalahan")
     }
     
 })
+
+// API untuk assign petugas
+app.post("/assign_petugas/:id_kegiatan", async (req, res) => {
+    const id = req.params.id_kegiatan;
+    try {
+        const data = req.body;
+        let query = '';
+
+        const promises = [];
+
+        for (let i = 1; i <= Object.keys(data[0]).length; i++) {
+            console.log("ppl:", data[0][i.toString()]);
+            console.log("pml:", data[1][i.toString()]);
+            console.log("koseka:", data[2][i.toString()]);
+            const k = "UPDATE `dokumen` SET `id_ppl` = '" + data[0][i.toString()] + "', `id_pml` = '" + data[1][i.toString()] + "', `id_koseka` = '" + data[2][i.toString()] + "' WHERE `dokumen`.`id_kegiatan` = '" + id + "' AND `dokumen`.`id_dok` = '" + i + "' ";
+            promises.push(new Promise((resolve, reject) => {
+                db.query(k, (err, results) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(results);
+                    }
+                });
+            }));
+        }
+
+        await Promise.all(promises);
+
+        res.status(200).send({
+            msg: "Assign Petugas Berhasil"
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send({
+            error: "Terjadi Kesalahan"
+        });
+    }
+});
+
 
 // API Login
 app.post("/login", (req,res) => {
@@ -336,6 +378,8 @@ app.post("/logout",(req,res) => {
         return "ERROR";
     }
 });
+
+
 
 // API Register Kegiatan Baru
 app.post("/add_kegiatan", async (req,res) => {
@@ -592,7 +636,7 @@ app.post("/get_progres_kecamatan_sensus/:id",(req,res) => {
     });
 });
 
-
+// API untuk mendapatkan progres per kecamatan (survei)
 app.post("/get_progres_kecamatan_survei/:id", (req, res) => {
     id_kegiatan = req.params.id
     get_kec_survei(id_kegiatan, (err, results) => {
@@ -634,6 +678,8 @@ app.post("/get_progres_kecamatan_survei/:id", (req, res) => {
         res.status(200).send(data_progres);
     });
 });
+
+// API untuk mendapatkan progres petugas
 
 // API untuk mendapatkan progres keseluruhan RB, Edcod, dan Entri
 app.post("/get_progres_sensus/:id_kegiatan", (req,res) => {
