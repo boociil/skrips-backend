@@ -8,7 +8,7 @@ const cors = require('cors');
 const app = express();
 const port = 3001;
 const secretKey = 'secretKey';
-const salt = 10
+
 
 const now = new Date();
 
@@ -54,8 +54,8 @@ function check_username(username) {
                 reject(err);
             }else{
                 const l = results.length
-                console.log("Total username ada di database : " + l);
-                console.log("l : " + l);
+                // console.log("Total username ada di database : " + l);
+                // console.log("l : " + l);
                 resolve(l);
             }
         });
@@ -311,7 +311,8 @@ app.post("/login", (req,res) => {
                             set_login(info.username);
                             res.status(200).json({
                                 msg:"Success",
-                                accessToken : token
+                                accessToken : token,
+                                role : results[0].role,
                             })
                         } else {
                             res.status(400).send({msg:"Password", accessToken : "-"});
@@ -638,7 +639,7 @@ app.post("/get_progres_kecamatan_survei/:id", (req, res) => {
 app.post("/get_progres_sensus/:id_kegiatan", (req,res) => {
     id = req.params.id_kegiatan
     try {
-        const query = "SELECT (SELECT COUNT(*) FROM sensus WHERE id_kegiatan = 'ST2023' AND status_pengdok = '1') AS rb,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = 'ST2023' AND status_edcod = '1') AS edcod,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = 'ST2023' AND status_entri = '1') AS entri,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = 'ST2023') AS total,(SELECT MIN(tgl_pengdok) AS mulai_pengdok FROM sensus) AS start_pengdok,(SELECT MIN(tgl_edcod) AS mulai_pengdok FROM sensus) AS start_edcod,(SELECT MIN(tgl_entri) AS mulai_pengdok FROM sensus) AS start_entr;"
+        const query = "SELECT (SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"' AND status_pengdok = '1') AS rb,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"' AND status_edcod = '1') AS edcod,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"' AND status_entri = '1') AS entri,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"') AS total,(SELECT MIN(tgl_pengdok) AS mulai_pengdok FROM sensus WHERE id_kegiatan = '" + id +"') AS start_pengdok,(SELECT MIN(tgl_edcod) AS mulai_pengdok FROM sensus WHERE id_kegiatan = '" + id +"') AS start_edcod,(SELECT MIN(tgl_entri) AS mulai_pengdok FROM sensus WHERE id_kegiatan = '" + id +"') AS start_entri;"
         console.log(query);
         db.query(query, [id,id,id,id], (err,results) => {
             if(err){
