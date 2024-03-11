@@ -180,14 +180,14 @@ function get_kec_sensus(id_kegiatan, callback) {
 
 // Autentikasi User (Admin) di cek menggunakan fungsi ini
 function authenticateToken(req, res, next) {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    const token = req.headers['token']
+    // console.log(token);
     if (token == null) return res.sendStatus(401); // Unauthorized
 
     jwt.verify(token, secretKey, (err, user) => {
         if (err) return res.sendStatus(403); // Forbidden
         req.user = user;
-        if (user.role == 'admin'){
+        if (user.role === 'admin'){
             next();
         }else{
             res.sendStatus(403); // Forbidden
@@ -382,34 +382,41 @@ app.post("/logout",(req,res) => {
 
 
 // API Register Kegiatan Baru
-app.post("/add_kegiatan", async (req,res) => {
+app.post("/add_kegiatan", authenticateToken, async (req,res) => {
 
     // Autentikasi User dulu, apakah bisa menambahkan kegiatan baru atau tidak
 
     try{
-        const { id, nama, jenis, metode, initiator_id, status, target_selesai, koseka, target_pengdok, target_edcod, target_entri } = req.body;
+        const { id, nama, jenis, metode, initiator_id, status, tgl_mulai, target_selesai, koseka, target_pengdok, target_edcod, target_entri } = req.body;
 
-        console.log('Id :', id);
-        console.log('nama :', nama);
-        console.log('jenis :', jenis);
-        console.log('metode : ', metode);
-        console.log('initiator_id : ', initiator_id);
-        console.log('status : ', status);
-        console.log('target_selesai : ', target_selesai);
-        console.log('koseka : ', koseka);
-        console.log('target_pengdok : ', target_pengdok);
-        console.log('target_edcod : ', target_edcod);
-        console.log('target_entri : ', target_entri);
+        // initiator_id = req.user.username
+
+        // console.log('Id :', id);
+        // console.log('nama :', nama);
+        // console.log('jenis :', jenis);
+        // console.log('metode : ', metode);
+        // console.log('initiator_id : ', req.user.username),
+        // console.log('status : ', status);
+        // console.log('tgl_mulai', tgl_mulai);
+        // console.log('target_selesai : ', target_selesai);
+        // console.log('koseka : ', koseka);
+        // console.log('target_pengdok : ', target_pengdok);
+        // console.log('target_edcod : ', target_edcod);
+        // console.log('target_entri : ', target_entri);
 
         //Push ke db
-        query = "INSERT INTO `kegiatan` (`id`, `nama`, `jenis`, `metode`, `initiator_id`, `status`, `taget_selesai`, `koseka`, `target_pengdok`, `target_edcod`, `target_entri`, `created_at`) VALUES ('" + id +"', '" + nama +"', '" + jenis +"', '" + metode + "', '" + initiator_id +"', '" + status +"', '" + target_selesai + "', '" + koseka + "', '" + target_pengdok + "', '" + target_edcod + "', '" + target_entri + "', current_timestamp());"
+        query = "INSERT INTO `kegiatan` (`id`, `nama`, `jenis`, `metode`, `initiator_id`, `status`,`tanggal_mulai`, `target_selesai`, `koseka`, `target_pengdok`, `target_edcod`, `target_entri`, `created_at`) VALUES ('" + id +"', '" + nama +"', '" + jenis +"', '2', '" + req.user.username +"', '1', '" + tgl_mulai + "', '" + target_selesai + "', '" + koseka + "', '" + target_pengdok + "', '" + target_edcod + "', '" + target_entri + "', current_timestamp());"
         db.query(query, (err,results) => {
             if (err) throw err;
         });
 
-        res.status(201).send("Berhasil");
+        res.status(201).send({
+            msg: "Register Berhasil",
+        });
     } catch(error){
-        res.status(500).send("Terjadi Kesalahan")
+        res.status(500).send({
+            msg: "Register Gagal sini",
+        })
     }
 });
 
@@ -459,7 +466,7 @@ app.post("/delete_kegiatan/:id_kegiatan", (req,res) => {
 });
 
 app.post("/get_all_kegiatan", (req,res) => {
-    query = "SELECT nama,id,tanggal_mulai,status,metode FROM `kegiatan`;";
+    query = "SELECT nama,id,tanggal_mulai,status,metode,initiator_id FROM `kegiatan`;";
     db.query(query, (err,results) => {
         if (err) throw err;
         res.status(200).send(results);
@@ -680,6 +687,14 @@ app.post("/get_progres_kecamatan_survei/:id", (req, res) => {
 });
 
 // API untuk mendapatkan progres petugas
+app.post("/get_progres_petugas/:id_kegiatan", (req,res) => {
+    id = req.params.id_kegiatan;
+    try {
+        const query  =""
+    } catch (error) {
+        console.error(error);
+    }
+})
 
 // API untuk mendapatkan progres keseluruhan RB, Edcod, dan Entri
 app.post("/get_progres_sensus/:id_kegiatan", (req,res) => {
