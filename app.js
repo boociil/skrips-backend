@@ -62,6 +62,19 @@ function check_username(username) {
     }); 
 }
 
+// fungsi untuk mengubah status kegiatan 
+function change_stats(id,status) {
+    try {
+        query = "UPDATE `kegiatan` SET `status` = '" + status +"' WHERE `kegiatan`.`id` = '" + id + "' "
+        db.query(query, (err,results) => {
+            if (err) throw err;
+
+        });
+    } catch (error) {
+        console.error(error)
+    }
+}
+
 // Fungsi untuk mencatat log aktivitas user
 function users_log_activiy(username, activity, information = "-") {
     // List Activity User : 
@@ -387,7 +400,7 @@ app.post("/add_kegiatan", authenticateToken, async (req,res) => {
     // Autentikasi User dulu, apakah bisa menambahkan kegiatan baru atau tidak
 
     try{
-        const { id, nama, jenis, metode, initiator_id, status, tgl_mulai, target_selesai, koseka, target_pengdok, target_edcod, target_entri } = req.body;
+        const { id, nama, jenis, tgl_mulai, target_selesai, koseka, target_pengdok, target_edcod, target_entri } = req.body;
 
         // initiator_id = req.user.username
 
@@ -404,8 +417,13 @@ app.post("/add_kegiatan", authenticateToken, async (req,res) => {
         // console.log('target_edcod : ', target_edcod);
         // console.log('target_entri : ', target_entri);
 
+        let status = '1'
+        if (jenis === '1'){
+            status = '2'
+        }
+
         //Push ke db
-        query = "INSERT INTO `kegiatan` (`id`, `nama`, `jenis`, `metode`, `initiator_id`, `status`,`tanggal_mulai`, `target_selesai`, `koseka`, `target_pengdok`, `target_edcod`, `target_entri`, `created_at`) VALUES ('" + id +"', '" + nama +"', '" + jenis +"', '2', '" + req.user.username +"', '1', '" + tgl_mulai + "', '" + target_selesai + "', '" + koseka + "', '" + target_pengdok + "', '" + target_edcod + "', '" + target_entri + "', current_timestamp());"
+        query = "INSERT INTO `kegiatan` (`id`, `nama`, `jenis`, `metode`, `initiator_id`, `status`,`tanggal_mulai`, `target_selesai`, `koseka`, `target_pengdok`, `target_edcod`, `target_entri`, `created_at`) VALUES ('" + id +"', '" + nama +"', '" + jenis +"', '2', '" + req.user.username +"', '" + status +"', '" + tgl_mulai + "', '" + target_selesai + "', '" + koseka + "', '" + target_pengdok + "', '" + target_edcod + "', '" + target_entri + "', current_timestamp());"
         db.query(query, (err,results) => {
             if (err) throw err;
         });
@@ -419,6 +437,7 @@ app.post("/add_kegiatan", authenticateToken, async (req,res) => {
         })
     }
 });
+
 
 app.post("/update_kegiatan", (req,res) => {
 
@@ -518,7 +537,7 @@ app.post("/get_info/:id", (req,res) => {
 })
 
 // API untuk mengisi tabel dokumen dan surve, parameter : id_kegiatan (id kegiatan survei)
-app.post("/fill_survei/:id_kegiatan",(req,res) => {
+app.post("/fill_survei/:id_kegiatan", authenticateToken,(req,res) => {
     
     id_kegiatan = req.params.id_kegiatan;
     
@@ -579,6 +598,7 @@ app.post("/fill_survei/:id_kegiatan",(req,res) => {
                     db.query(the_query_2, (err, results) =>{
                         if (err) throw err;
                     })
+                    change_stats(id_kegiatan,"2")
                     res.status(200).send("Berhasil");
                 });
             }else{
@@ -727,7 +747,7 @@ app.post("/get_all_users", (req,res) => {
 })
 
 // API untuk mengisi tabel dokumen dan sensus, parameter : id_kegiatan (id kegiatan sensus)
-app.post("/fill_sensus/:id_kegiatan",(req,res) => {
+app.post("/fill_sensus/:id_kegiatan", authenticateToken ,(req,res) => {
     
     id_kegiatan = req.params.id_kegiatan;
     try {
@@ -783,6 +803,28 @@ app.post("/fill_sensus/:id_kegiatan",(req,res) => {
     } catch (error) {
         
     }
+})
+
+// API untuk mengecek id_kegiatan unik
+app.post("/check_id_kegiatan/:id_kegiatan", authenticateToken, (req,res) => {
+    id = req.params.id_kegiatan
+    query = "SELECT * FROM `kegiatan` WHERE id = '" + id + "';";
+    db.query(query, (err,results) => {
+        if (err) throw err;
+        console.log(results);
+        const l = results.length
+        console.log(l);
+        if (l === 0){
+            res.status(200).send({
+                msg: "Sukses"
+            })
+        }else{
+            console.log("else");
+            res.status(400).send({
+                msg: "Gagal"
+            })
+        }
+    })
 })
 
 // API untuk mendapatkan kode wilayah, dan status pengolahan sensus, parameter : id_kegiatan (id kegiatan sensus)
