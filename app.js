@@ -62,6 +62,18 @@ function check_username(username) {
     }); 
 }
 
+// fungsi untuk mendapatkan informasi suatu kegiatan
+async function info(id, callback) {
+    query = "SELECT * FROM `kegiatan` WHERE id = '" + id + "';";
+    db.query(query, (err,results) => {
+        if (err) {
+            callback(err, null);
+            return;
+        }
+        callback(null, results);
+    })
+}
+
 // fungsi untuk mengubah status kegiatan 
 function change_stats(id,status) {
     try {
@@ -117,19 +129,6 @@ function set_logout(username) {
     }
 }
 
-// fungsi untuk mengecek apakah id kegiatan sudah ada di tabel database
-// Penggunaan : 
-// nothing_in_db(id_kegiatan, (err, hasil) => {
-//     if (err) {
-//         console.error("Terjadi kesalahan:", err);
-//         return;
-//     }
-
-//     if (hasil){
-//     
-//      * JIKA KEGIATAN TIDAK ADA DI DATABASE, MAKA LAKUKAN SESUATU DISINI
-//  
-//      }
 function nothing_in_db(id_kegiatan, callback) {   
     query = "SELECT * FROM `dokumen` WHERE id_kegiatan = '" + id_kegiatan + "' LIMIT 10 ;";
     let hasil = false;
@@ -316,7 +315,7 @@ app.post("/assign_petugas/:id_kegiatan", async (req, res) => {
         }
 
         await Promise.all(promises);
-
+        change_stats(id,3)
         res.status(200).send({
             msg: "Assign Petugas Berhasil"
         });
@@ -470,17 +469,42 @@ app.post("/delete_user/:usrnm", authenticateToken, (req,res) =>{
     
 });
 
-app.post("/delete_kegiatan/:id_kegiatan", (req,res) => {
+app.post("/delete_kegiatan/:id_kegiatan", authenticateToken, (req,res) => {
 
-    // Autentikasi User
+    const id = req.params.id_kegiatan
 
-    const id = req.params.id_kegiatan;
     query = "DELETE FROM `kegiatan` WHERE id = '" + id + "';";
-    //query = "SELECT * FROM USERS";
-    db.query(query , (err,results) =>{
-        if(err) throw err;
-        const a = results;
-        res.status(200).send("Hapus kegiatan " + id + " Berhasil");     
+    info(id , (err,results) => {
+        if (err) {
+            console.log("Terjadi kesalahan");
+            res.sendStatus(500);
+        }
+
+        const data = results;
+        const jenis = data[0].jenis
+
+        let the_q = ""
+        if (jenis === "2"){
+            the_q = "DELETE FROM `survei` WHERE id_kegiatan = '" + id +"';"
+        }else{
+            the_q = "DELETE FROM `sensus` WHERE id_kegiatan = '" + id +"';"
+        }
+        db.query(the_q, (err,res) => {
+            if (err) throw err;
+        })
+
+        const q = "DELETE FROM `dokumen` WHERE id_kegiatan = '" + id +"';"
+        db.query(q, (err,res) => {
+            if (err) throw err;
+        })
+
+        const query = "DELETE FROM `kegiatan` WHERE id = '" + id +"'; "
+        console.log(query);
+        db.query(query, (err,ress) => {
+            if (err) throw err;
+        })
+
+        res.status(200).send("Hapus kegiatan " + id + " Berhasil"); 
     })
 });
 
@@ -816,12 +840,14 @@ app.post("/check_id_kegiatan/:id_kegiatan", authenticateToken, (req,res) => {
         console.log(l);
         if (l === 0){
             res.status(200).send({
-                msg: "Sukses"
+                msg: "Sukses",
+                bisa : true
             })
         }else{
             console.log("else");
-            res.status(400).send({
-                msg: "Gagal"
+            res.status(200).send({
+                msg: "Gagal",
+                bisa : false
             })
         }
     })
