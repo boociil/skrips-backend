@@ -162,7 +162,7 @@ function get_kode_daerah(callback) {
 
 // Fungsi untuk mendapatkan seluruh kecamatan untuk kegiatan Survei
 function get_kec_survei(id_kegiatan, callback) {
-    const query = 'SELECT dokumen.kode_sls AS "kode_sls", dokumen.id_x AS "id_x", dokumen.kode_desa AS "kode_desa", dokumen.kode_kec AS "kode_kec",survei.status_pengdok, survei.status_edcod, survei.status_entri FROM `survei` INNER JOIN dokumen ON survei.id_dok = dokumen.id_dok AND survei.id_kegiatan = dokumen.id_kegiatan WHERE survei.id_kegiatan = ?';
+    const query = 'SELECT dokumen.kode_sls AS "kode_sls", kecamatan.nama as "nama_kec", dokumen.id_x AS "id_x", dokumen.kode_desa AS "kode_desa", dokumen.kode_kec AS "kode_kec",survei.status_pengdok, survei.status_edcod, survei.status_entri FROM `survei` INNER JOIN dokumen ON survei.id_dok = dokumen.id_dok AND survei.id_kegiatan = dokumen.id_kegiatan INNER JOIN kecamatan ON kecamatan.kode = dokumen.kode_kec WHERE survei.id_kegiatan = ?;';
     // console.log(query);
     // Jalankan query dengan parameterized query untuk menghindari SQL Injection
     db.query(query, [id_kegiatan], (err, results) => {
@@ -489,11 +489,13 @@ app.post("/delete_kegiatan/:id_kegiatan", authenticateToken, (req,res) => {
         }else{
             the_q = "DELETE FROM `sensus` WHERE id_kegiatan = '" + id +"';"
         }
+        console.log(the_q);
         db.query(the_q, (err,res) => {
             if (err) throw err;
         })
 
         const q = "DELETE FROM `dokumen` WHERE id_kegiatan = '" + id +"';"
+        console.log(q);
         db.query(q, (err,res) => {
             if (err) throw err;
         })
@@ -643,6 +645,7 @@ app.post("/get_progres_kecamatan_sensus/:id",(req,res) => {
         if (err) {
             console.log("Terjadi kesalahan");
             res.sendStatus(500);
+            return;
         }
         const data = results;
         // console.log(results);
@@ -697,32 +700,41 @@ app.post("/get_progres_kecamatan_survei/:id", (req, res) => {
             return;
         }
         
-        const data_progres = results.reduce((acc, item) => {
-            if (!acc[item.kode_kec]) {
-                acc[item.kode_kec] = {
+        const data = results;
+        // console.log(results);
+        let data_progres = {}; // inisialisasi objek kosong
+
+        // Iterasi melalui data dan mengisi objek data_progres
+        data.forEach(item => {
+            if (!data_progres[item.kode_kec]) {
+                data_progres[item.kode_kec] = {
+                    nama_kec : "",
                     rb: 0,
                     edcod: 0,
                     entri: 0,
                     total: 0,
-                    progres_rb: 0,
-                    progres_edcod: 0,
-                    progres_entri: 0,
+                    progres_rb : 0,
+                    progres_edcod : 0,
+                    progres_entri : 0,
                 };
             }
 
-            acc[item.kode_kec].total++;
-            if (item.status_pengdok === 1) acc[item.kode_kec].rb++;
-            if (item.status_edcod === 1) acc[item.kode_kec].edcod++;
-            if (item.status_entri === 1) acc[item.kode_kec].entri++;
+            data_progres[item.kode_kec]["nama_kec"] = item["nama_kec"]
 
-            return acc;
-        }, {});
-
-        // Hitung persentase progres setelah semua data dikumpulkan
-        Object.values(data_progres).forEach(progres => {
-            progres.progres_rb = (progres.rb / progres.total) * 100;
-            progres.progres_edcod = (progres.edcod / progres.total) * 100;
-            progres.progres_entri = (progres.entri / progres.total) * 100;
+            if (item.status_pengdok === 1) {
+                data_progres[item.kode_kec]["rb"] += 1;
+            }
+            if (item.status_edcod === 1) {
+                data_progres[item.kode_kec]["edcod"] += 1;
+            }
+            if (item.status_entri === 1) {
+                data_progres[item.kode_kec]["entri"] += 1;
+            }
+            data_progres[item.kode_kec]["total"] += 1;
+            data_progres[item.kode_kec]["progres_rb"] = (data_progres[item.kode_kec]["rb"]/data_progres[item.kode_kec]["total"]) * 100;
+            data_progres[item.kode_kec]["progres_edcod"] = (data_progres[item.kode_kec]["edcod"]/data_progres[item.kode_kec]["total"]) * 100;
+            data_progres[item.kode_kec]["progres_entri"] = (data_progres[item.kode_kec]["entri"]/data_progres[item.kode_kec]["total"]) * 100;
+    
         });
 
         // console.log(data_progres);
@@ -947,7 +959,9 @@ app.post("/update_RB", (req,res) => {
     
     db.query(query, (err,results) => {
         if (err) throw err;
-        res.status(200).send("Update Berhasil");
+        res.status(200).send({
+            msg: "Update Berhasil"
+        });
     })
     console.log(id_kegiatan,status_pengdok,tgl_pengdok,penerima_dok,id_dok);
 })
@@ -965,8 +979,10 @@ app.post("/update_Edcod", (req,res) => {
 
     db.query(query, (err,results) => {
         if (err) throw err;
-        res.status(200).send("Update Berhasil");
-    })
+        res.status(200).send({
+            msg: "Update Berhasil"
+        });
+    });
     console.log(id_kegiatan,id_dok, status_edcod, tgl_edcod, petugas_edcod);
 })
 
@@ -986,7 +1002,9 @@ app.post("/update_Entri", (req,res) => {
 
     db.query(query, (err,results) => {
         if (err) throw err;
-        res.status(200).send("Update Berhasil");
+        res.status(200).send({
+            msg: "Update Berhasil"
+        });
     })
    
 })
