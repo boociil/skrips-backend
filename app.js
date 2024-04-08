@@ -123,6 +123,14 @@ function set_login(username) {
 function set_logout(username) {
     try {
         // Destroy Session
+        query = "UPDATE `users` SET `status` = '0' WHERE `users`.`username` = '" + username +"'; ";
+        db.query(query, (err,results) => {
+            if (err) throw err;
+
+            // BUAT SESSION DISINI
+
+            // Masukan kedalam Log
+        });
         users_log_activiy(username,"LOG_OUT");
     } catch (error) {
         
@@ -209,8 +217,7 @@ function authenticateToken(req, res, next) {
 
 // Autentikasi User (Admin) di cek menggunakan fungsi ini
 function authenticateTokenLevel2(req, res, next) {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    const token = req.headers['token']
     if (token == null) return res.sendStatus(401); // Unauthorized
 
     jwt.verify(token, secretKey, (err, user) => {
@@ -221,6 +228,20 @@ function authenticateTokenLevel2(req, res, next) {
         }else{
             res.sendStatus(403); // Forbidden
         }
+    });
+}
+
+// mendapatkan informasi user dari token menggunakan fungsi ini
+function get_users_info(req, res, next) {
+    const token = req.headers['token']
+    console.log("token : ", token);
+    if (token == null) return res.sendStatus(401); // Unauthorized
+
+    jwt.verify(token, secretKey, (err, user) => {
+        if (err) return res.sendStatus(403); // Forbidden
+        req.user = user;
+        console.log(req.user);
+        next();
     });
 }
 
@@ -263,26 +284,29 @@ app.post("/register", authenticateToken, async (req,res) =>{
         const { username, password, firstName, lastName, gender, role, status } = req.body;
         const hashedPass = await bcrypt.hash(password, 10);
 
-        console.log('Username :', username);
-        console.log('Password :', password);
-        console.log('hashedPassword :', hashedPass);
-        console.log('gender : ', gender);
-        console.log('firstName : ', firstName);
-        console.log('lastName : ', lastName);
-        console.log('role : ', role);
-        console.log('status : ', status);
-
         //Push ke db
-        query = "INSERT INTO `users` (`username`, `firstName`, `lastName`, `pass`, `role`, `status`, `created_at`) VALUES ('" + username + "', '" + firstName + "', '" + lastName + "', '" + hashedPass +"', '" + role + "', '" + status + "', current_timestamp());"
-        db.query(query, (err,results) => {
-            if (err){
-                throw err;
-                res.status(403).send(err);
-            } 
-            
+        const query = "INSERT INTO `users` (`username`, `firstName`, `lastName`, `pass`, `gender` , `role`, `status`, `created_at`) VALUES ('" + username + "', '" + firstName + "', '" + lastName + "', '" + hashedPass +"', '" + gender +"' ,'" + role + "', '" + status + "', current_timestamp());"
+        check_username(username)
+        .then(l => {
+            if(l != 0){
+                res.status(200).send({
+                    "msg" : "Username Duplikat"
+                })
+            }else{
+                console.log(query);
+                db.query(query, (err,results) => {
+                    if (err){
+                        throw err;
+                        res.status(403).send(err);
+                    }
+                    
+                    res.status(201).send({
+                        "msg" : "Berhasil"
+                    });
+                });
+            }
         });
-
-        res.status(201).send("Berhasil");
+        
     } catch(error){
         // res.status(500).send("Terjadi Kesalahan")
     }
@@ -338,6 +362,7 @@ app.post("/login", (req,res) => {
         query = 'SELECT username,firstName,lastName,gender,role,pass FROM `users` WHERE `username`= "' + username + '";';
         db.query(query, (err,results) =>{
             if (!results.length){
+                // Jika Kesalahan berada pada username
                 res.status(400).send({
                     msg : "Username",
                     accessToken : "-",
@@ -369,6 +394,7 @@ app.post("/login", (req,res) => {
                                 role : results[0].role,
                             })
                         } else {
+                            // Jika Kesalahan berada pada password
                             res.status(400).send({msg:"Password", accessToken : "-"});
                         }
                     }
@@ -381,13 +407,18 @@ app.post("/login", (req,res) => {
 });
 
 // API Log Out
-app.post("/logout",(req,res) => {
+app.post("/logout", get_users_info ,(req,res) => {
     try {
         const info = req.user;
         const username = info.username;
         set_logout(username);
+        res.status(200).send({
+            msg: "Success"
+        })
     } catch (error) {
-        return "ERROR";
+        res.status(200).send({
+            msg: error
+        })
     }
 });
 
@@ -401,37 +432,37 @@ app.post("/add_kegiatan", authenticateToken, async (req,res) => {
     try{
         const { id, nama, jenis, tgl_mulai, target_selesai, koseka, target_pengdok, target_edcod, target_entri } = req.body;
 
-        // initiator_id = req.user.username
-
-        // console.log('Id :', id);
-        // console.log('nama :', nama);
-        // console.log('jenis :', jenis);
-        // console.log('metode : ', metode);
-        // console.log('initiator_id : ', req.user.username),
-        // console.log('status : ', status);
-        // console.log('tgl_mulai', tgl_mulai);
-        // console.log('target_selesai : ', target_selesai);
-        // console.log('koseka : ', koseka);
-        // console.log('target_pengdok : ', target_pengdok);
-        // console.log('target_edcod : ', target_edcod);
-        // console.log('target_entri : ', target_entri);
-
         let status = '1'
         if (jenis === '1'){
             status = '2'
         }
 
-        //Push ke db
-        query = "INSERT INTO `kegiatan` (`id`, `nama`, `jenis`, `metode`, `initiator_id`, `status`,`tanggal_mulai`, `target_selesai`, `koseka`, `target_pengdok`, `target_edcod`, `target_entri`, `created_at`) VALUES ('" + id +"', '" + nama +"', '" + jenis +"', '2', '" + req.user.username +"', '" + status +"', '" + tgl_mulai + "', '" + target_selesai + "', '" + koseka + "', '" + target_pengdok + "', '" + target_edcod + "', '" + target_entri + "', current_timestamp());"
-        db.query(query, (err,results) => {
-            if (err) throw err;
-        });
+        nothing_in_db(id, (err,hasil) => {
+            if (err){
+                console.error("Terjadi kesalahan:", err);
+                return;
+            }
 
-        res.status(201).send({
-            msg: "Register Berhasil",
-        });
+            if (hasil) {
+                //Push ke db
+                query = "INSERT INTO `kegiatan` (`id`, `nama`, `jenis`, `metode`, `initiator_id`, `status`,`tanggal_mulai`, `target_selesai`, `koseka`, `target_pengdok`, `target_edcod`, `target_entri`, `created_at`) VALUES ('" + id +"', '" + nama +"', '" + jenis +"', '2', '" + req.user.username +"', '" + status +"', '" + tgl_mulai + "', '" + target_selesai + "', '" + koseka + "', '" + target_pengdok + "', '" + target_edcod + "', '" + target_entri + "', current_timestamp());"
+                db.query(query, (err,results) => {
+                    if (err) throw err;
+                });
+
+                res.status(201).send({
+                    msg: "Berhasil",
+                });
+            }else{
+                res.status(400).send({
+                    type : "duplicate_id",
+                    msg: "ID telah digunakan",
+                });
+            }
+        })
     } catch(error){
         res.status(500).send({
+            type : "Unknown_error", 
             msg: "Register Gagal sini",
         })
     }
@@ -510,6 +541,7 @@ app.post("/delete_kegiatan/:id_kegiatan", authenticateToken, (req,res) => {
     })
 });
 
+// mengambil semua list kegiatan
 app.post("/get_all_kegiatan", (req,res) => {
     query = "SELECT nama,id,tanggal_mulai,status,metode,initiator_id FROM `kegiatan`;";
     db.query(query, (err,results) => {
@@ -553,6 +585,7 @@ app.post("/get_all_mitra", (req,res) => {
     })
 })
 
+// mengambil info mengenai suatu kegiatan
 app.post("/get_info/:id", (req,res) => {
     const id = req.params.id;
     query = "SELECT * FROM `kegiatan` WHERE id = '" + id + "';";
@@ -772,7 +805,7 @@ app.post("/get_progres_sensus/:id_kegiatan", (req,res) => {
 // API untuk mendapatkan semua users (digunakan untuk assign petugas)
 app.post("/get_all_users", (req,res) => {
     try {
-        const query = "SELECT `username`, `firstName`, `lastName` FROM `users`;"
+        const query = "SELECT `username`, `firstName`, `lastName`, `role`, `status` FROM `users` ORDER BY `role`,`status` DESC;"
         db.query(query, (err,results) => {
             if (err) throw err;
             res.status(200).send(results);
@@ -908,7 +941,9 @@ app.post("/update_RB_survei", (req,res) => {
     // console.log(query);
     db.query(query, (err,results) => {
         if (err) throw err;
-        res.status(200).send("Update Berhasil");
+        res.status(200).send({
+            msg : "Update Berhasil"
+        });
     })
 })
 
@@ -925,7 +960,9 @@ app.post("/update_Edcod_survei", (req,res) => {
     // console.log(query);
     db.query(query, (err,results) => {
         if (err) throw err;
-        res.status(200).send("Update Berhasil");
+        res.status(200).send({
+            msg : "Update Berhasil"
+        });
     })
 })
 
@@ -942,7 +979,9 @@ app.post("/update_Entri_survei", (req,res) => {
     // console.log(query);
     db.query(query, (err,results) => {
         if (err) throw err;
-        res.status(200).send("Update Berhasil");
+        res.status(200).send({
+            msg : "Update Berhasil"
+        });
     })
 })
 
