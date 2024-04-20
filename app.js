@@ -62,6 +62,13 @@ function check_username(username) {
     }); 
 }
 
+// fungsi delay, digunakan untuk mendelay respons dalam satuan milisecond
+// hanya digunakan pada fase development
+// penggunaan : delay(ms).then(funcgtion () => { // apa yg dilakukan disini })
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 // fungsi untuk mendapatkan informasi suatu kegiatan
 async function info(id, callback) {
     query = "SELECT * FROM `kegiatan` WHERE id = '" + id + "';";
@@ -84,6 +91,33 @@ function change_stats(id,status) {
         });
     } catch (error) {
         console.error(error)
+    }
+}
+
+// Fungsi untuk mendapatkan progres penerima dok
+function get_penerima_dok(id) {
+    try {
+        const query = "SELECT penerima_dok, COUNT(penerima_dok) as 'TOTAL'FROM survei WHERE id_kegiatan = ? GROUP BY penerima_dok;"
+        db.query(query, [id] , (err,results) => {
+            if (err) throw err;
+            console.log(JSON.stringify(results));
+            return JSON.stringify(results);
+        });
+    } catch (error) {
+        
+    }
+}
+
+// Fungsi untuk mendapatkan progres petugas edcod
+function get_petugas_edcod(id) {
+    try {
+        const query = " SELECT petugas_edcod, COUNT(petugas_edcod) as 'TOTAL'FROM survei WHERE id_kegiatan = ? GROUP BY petugas_edcod;"
+        db.query(query, [id] , (err,results) => {
+            if (err) throw err;
+            return results;
+        })
+    } catch (error) {
+        
     }
 }
 
@@ -127,9 +161,6 @@ function set_logout(username) {
         db.query(query, (err,results) => {
             if (err) throw err;
 
-            // BUAT SESSION DISINI
-
-            // Masukan kedalam Log
         });
         users_log_activiy(username,"LOG_OUT");
     } catch (error) {
@@ -354,11 +385,13 @@ app.post("/assign_petugas/:id_kegiatan", async (req, res) => {
 
 // API Login
 app.post("/login", (req,res) => {
+    
+    write_log(`IP : ${req.ip} requesting POST on /login`);
 
     try {
 
         const { username, password } = req.body;
-        console.log(username,password);
+        console.log("IP : " , req.ip);
         query = 'SELECT username,firstName,lastName,gender,role,pass FROM `users` WHERE `username`= "' + username + '";';
         db.query(query, (err,results) =>{
             if (!results.length){
@@ -393,6 +426,8 @@ app.post("/login", (req,res) => {
                                 accessToken : token,
                                 role : results[0].role,
                             })
+                           
+                            
                         } else {
                             // Jika Kesalahan berada pada password
                             res.status(400).send({msg:"Password", accessToken : "-"});
@@ -488,11 +523,12 @@ app.post("/delete_user/:usrnm", authenticateToken, (req,res) =>{
     try {
         const usrnm = req.params.usrnm;
         query = "DELETE FROM `users` WHERE username = '" + usrnm + "';";
-        //query = "SELECT * FROM USERS";
         db.query(query , (err,results) =>{
             if(err) throw err;
             const a = results;
-            res.status(200).send("Hapus Users " + usrnm + " Berhasil");     
+            res.status(200).send({
+                msg : "Success"
+            });     
         })
     } catch (error) {
         res.sendStatus(500);
@@ -625,12 +661,6 @@ app.post("/fill_survei/:id_kegiatan", authenticateToken,(req,res) => {
                     let id_dok = 1
 
                     for (let key in data){
-                        // console.log("Key : ", key);
-                        // console.log("kode_desa : ", data[key]["kode_desa"]);
-                        // console.log("kode_kec : ", data[key]["kode_kec"]);
-                        // console.log("noKS : ", data[key]["noKS"]);
-                        // console.log("noBS : ", data[key]["noBS"]);
-                        // console.log("jumlah ruta : ", data[key]["jumlah_ruta"])
 
                         the_query += "('" + id_kegiatan + "', '" + id_dok + "', '000100','"+ key +"', '"+ data[key]["kode_desa"] +"', '" + data[key]["kode_kec"] +"', '-', '-', '-', '2'),"
 
@@ -808,6 +838,7 @@ app.post("/get_all_users", (req,res) => {
         const query = "SELECT `username`, `firstName`, `lastName`, `role`, `status` FROM `users` ORDER BY `role`,`status` DESC;"
         db.query(query, (err,results) => {
             if (err) throw err;
+            console.log(results);
             res.status(200).send(results);
         })
     } catch (error) {
@@ -922,6 +953,15 @@ app.post("/get_pengolahan_data_survei/:id_kegiatan", (req,res) => {
 // API untuk mendapatkan seluruh Korong (Digunakan untuk memilih sampel dari seluruh SLS yang ada)
 app.post("/get_sls",(req,res) => {
     query = "SELECT x.id AS 'id', x.nama AS 'Korong', desa.kode AS 'kode_desa', desa.nama AS 'Desa', kecamatan.kode AS 'kode_kec', kecamatan.nama AS 'Kec' FROM `x` INNER JOIN desa ON x.kode_desa = desa.kode AND x.kode_kec = desa.kode_kec INNER JOIN kecamatan on x.kode_kec = kecamatan.kode ORDER BY kode_kec, kode_desa;"
+    db.query(query, (err,results) => {
+        if (err) throw err;
+        res.status(200).send(results);
+    })
+})
+
+// Clone dari get_sls
+app.post("/get_sls2",(req,res) => {
+    query = "SELECT sls.kode AS 'kode_sls', sls.nama_x AS 'SLS', desa.kode AS 'kode_desa', desa.nama AS 'Desa', kecamatan.kode AS 'kode_kec', kecamatan.nama AS 'Kec' FROM `sls` INNER JOIN desa ON sls.kode_desa = desa.kode AND sls.kode_kec = desa.kode_kec INNER JOIN kecamatan on sls.kode_kec = kecamatan.kode ORDER BY kecamatan.kode, desa.kode, sls.kode ASC ;"
     db.query(query, (err,results) => {
         if (err) throw err;
         res.status(200).send(results);
@@ -1046,6 +1086,24 @@ app.post("/update_Entri", (req,res) => {
         });
     })
    
+})
+
+// API untuk mendapatkan progres per petugas survei
+app.post("/progres_petugas_survei/:id_kegiatan", (req,res) => {
+    const id = req.params.id_kegiatan
+    try {
+        let json_query = {
+            pengdok : "",
+            petugas_edcod : "",
+        }
+        // json_query.pengdok = get_penerima_dok(id);
+        json_query.petugas_edcod = get_petugas_edcod(id);
+        console.log(get_penerima_dok(id));
+        console.log(json_query);
+        res.status(200).send(json_query);
+    } catch (error) {
+            console.log(error);
+    }
 })
 
 

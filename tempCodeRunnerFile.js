@@ -1,1 +1,1 @@
-Check
+get_progres_sensus/:id_kegiatan
