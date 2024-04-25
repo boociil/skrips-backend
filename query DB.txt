@@ -110,3 +110,11 @@ WHERE id_kegiatan = 'Sakernas2020'
 GROUP BY 
 penerima_dok;
 /////////////////////////////////
+
+
+MENAMBAHKAN MITRA EDITING/CODING
+---------------------------------
+INSERT INTO `mitra` (`id`, `nama`, `status`, `start_contract`, `end_contract`) VALUES (NULL, 'Benedict Tan', 'Entri', '2024-04-25', '2025-01-31');
+
+
+/////////////////////////////////

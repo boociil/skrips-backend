@@ -31,3 +31,5 @@
 /update_Edcod => mengubah isian tabel sensus kolom Edcod
 /update_Entri => mengubah isian tabel sensus kolom Entri
 
+- belum terpakai
+? masih belum jelas
