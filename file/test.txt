@@ -1,0 +1,1 @@
+ini adalah file txt yang berada pada dir file/test.txt

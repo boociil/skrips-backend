@@ -3,7 +3,13 @@ var db = require('./dbconn');
 var write_log = require('./writeLog');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+
+// agar API bisa diakses
 const cors = require('cors');
+
+// digunakan untuk endpoint file
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const port = 3001;
@@ -285,6 +291,26 @@ function get_users_info(req, res, next) {
 app.get("/", (req,res) => {
     res.send("Hello world");
 });
+
+
+// Endpoint untuk mengakses file
+app.get('/files/:filename', (req, res) => {
+    const filename = req.params.filename;
+    const filePath = path.join(__dirname, 'file', filename);
+  
+    // Baca file dari sistem file
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        console.error('Error reading file:', err);
+        return res.status(500).send('Internal Server Error');
+      }
+  
+      // Kirim file sebagai respons
+      res.setHeader('Content-Type', 'application/octet-stream');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(data);
+    });
+  });
 
 //END OF GET//////////////////////////////////////////////////
 
