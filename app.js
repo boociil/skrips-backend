@@ -623,7 +623,7 @@ app.post("/get_all_admin", (req,res) => {
 
 // mendapatkan semua mitra edcod
 app.post("/get_all_mitra_edcod", (req,res) => {
-    query = "SELECT * FROM `mitra` WHERE status = 'Editing';";
+    query = "SELECT * FROM `mitra` WHERE status = 'Edcod';";
     db.query(query, (err,results) => {
         if (err) throw err;
         res.status(200).send(results);
@@ -641,12 +641,10 @@ app.post("/get_all_mitra_entri", (req,res) => {
 
 // mendapatkan semua mitra
 app.post("/get_all_mitra", (req,res) => {
-    query = "SELECT nama,status,start_contract, end_contract FROM `mitra`;";
+    query = "SELECT nama,status,start_contract, end_contract FROM `mitra` ORDER BY status;";
     db.query(query, (err,results) => {
         if (err) throw err;
         const data_json = JSON.stringify(results)
-        console.log(data_json);
-        console.log(typeof(data_json));
         const modified_data = JSON.parse(data_json)
 
         const newData = modified_data.map((item) => {
@@ -686,6 +684,7 @@ app.post("/register_mitra", (req,res) => {
 
 // mengambil info mengenai suatu kegiatan
 app.post("/get_info/:id", (req,res) => {
+    
     const id = req.params.id;
     query = "SELECT * FROM `kegiatan` WHERE id = '" + id + "';";
     db.query(query, (err,results) => {
@@ -868,15 +867,92 @@ app.post("/get_progres_kecamatan_survei/:id", (req, res) => {
     });
 });
 
-// API untuk mendapatkan progres petugas
-app.post("/get_progres_petugas/:id_kegiatan", (req,res) => {
+// API untuk mendapatkan progres petugas RB (sensus)
+app.post("/get_progres_pengdok_sensus/:id_kegiatan", (req,res) => {
     id = req.params.id_kegiatan;
     try {
-        const query  =""
+        const query  ="SELECT users.firstName, users.lastName , COUNT(penerima_dok) as 'TOTAL' FROM sensus INNER JOIN users ON users.username = sensus.penerima_dok WHERE id_kegiatan = ? GROUP BY penerima_dok;"
+        db.query(query, [id], (err,results) => {
+            if (err) throw err;
+            res.status(200).send(results)
+        })
+    } catch (error) {
+        res.status(500)
+    }
+})
+
+// API untuk mendapatkan progres petugas RB (Survei)
+app.post("/get_progres_pengdok_survei/:id_kegiatan", (req,res) => {
+    id = req.params.id_kegiatan;
+    try {
+        const query  ="SELECT users.firstName, users.lastName , COUNT(penerima_dok) as 'TOTAL' FROM survei INNER JOIN users ON users.username = survei.penerima_dok WHERE id_kegiatan = ? GROUP BY penerima_dok;"
+        db.query(query, [id], (err,results) => {
+            if (err) throw err;
+            res.status(200).send(results)
+        })
     } catch (error) {
         console.error(error);
     }
 })
+
+// API untuk mendapatkan progres petugas Edcod (Survei)
+app.post("/get_progres_edcod_survei/:id_kegiatan", (req,res) => {
+    id = req.params.id_kegiatan;
+    try {
+        const query  ="SELECT mitra.nama, COUNT(petugas_edcod) as 'TOTAL' FROM survei INNER JOIN mitra ON mitra.id = survei.petugas_edcod WHERE id_kegiatan = ? GROUP BY petugas_edcod;"
+        db.query(query, [id], (err,results) => {
+            if (err) throw err;
+            res.status(200).send(results)
+        })
+    } catch (error) {
+        console.error(error);
+    }
+})
+
+// API untuk mendapatkan progres petugas Edcod (sensus)
+app.post("/get_progres_edcod_sensus/:id_kegiatan", (req,res) => {
+    id = req.params.id_kegiatan;
+    try {
+        const query  ="SELECT mitra.nama, COUNT(petugas_edcod) as 'TOTAL' FROM sensus INNER JOIN mitra ON mitra.id = sensus.petugas_edcod WHERE id_kegiatan = ? GROUP BY petugas_edcod;"
+        db.query(query, [id], (err,results) => {
+            if (err) throw err;
+            res.status(200).send(results)
+        })
+    } catch (error) {
+        console.error(error);
+    }
+})
+
+
+// API untuk mendapatkan progres petugas Entri (Survei)
+app.post("/get_progres_entri_survei/:id_kegiatan", (req,res) => {
+    id = req.params.id_kegiatan;
+    try {
+        const query  ="SELECT mitra.nama, COUNT(petugas_entri) as 'TOTAL' FROM survei INNER JOIN mitra ON mitra.id = survei.petugas_entri WHERE id_kegiatan = ? GROUP BY petugas_entri;"
+        db.query(query, [id], (err,results) => {
+            if (err) throw err;
+            res.status(200).send(results)
+        })
+    } catch (error) {
+        console.error(error);
+    }
+})
+
+// API untuk mendapatkan progres petugas Entri (sensus)
+app.post("/get_progres_entri_sensus/:id_kegiatan", (req,res) => {
+    id = req.params.id_kegiatan;
+    try {
+        const query  ="SELECT mitra.nama, COUNT(petugas_entri) as 'TOTAL' FROM sensus INNER JOIN mitra ON mitra.id = sensus.petugas_entri WHERE id_kegiatan = ? GROUP BY petugas_entri;"
+        db.query(query, [id], (err,results) => {
+            if (err) throw err;
+            res.status(200).send(results)
+        })
+    } catch (error) {
+        console.error(error);
+    }
+})
+
+
 
 // API untuk mendapatkan progres keseluruhan RB, Edcod, dan Entri
 app.post("/get_progres_sensus/:id_kegiatan", (req,res) => {
