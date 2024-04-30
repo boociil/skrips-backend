@@ -106,7 +106,7 @@ function get_penerima_dok(id) {
         const query = "SELECT penerima_dok, COUNT(penerima_dok) as 'TOTAL'FROM survei WHERE id_kegiatan = ? GROUP BY penerima_dok;"
         db.query(query, [id] , (err,results) => {
             if (err) throw err;
-            console.log(JSON.stringify(results));
+            // console.log(JSON.stringify(results));
             return JSON.stringify(results);
         });
     } catch (error) {
@@ -222,14 +222,14 @@ function get_kec_survei(id_kegiatan, callback) {
 // Fungsi untuk mendapatkan seluruh kecamatan untuk kegiatan Sensus
 function get_kec_sensus(id_kegiatan, callback) {
     const query = 'SELECT dokumen.kode_sls AS "kode_sls", dokumen.id_x AS "id_x", dokumen.kode_desa AS "kode_desa", dokumen.kode_kec AS "kode_kec", kecamatan.nama AS "nama_kec" , sensus.status_pengdok, sensus.status_edcod, sensus.status_entri FROM `sensus` INNER JOIN dokumen ON sensus.id_dok = dokumen.id_dok AND sensus.id_kegiatan = dokumen.id_kegiatan INNER JOIN kecamatan ON dokumen.kode_kec = kecamatan.kode WHERE sensus.id_kegiatan = ? ORDER BY dokumen.kode_kec ASC;';
-    console.log(query);
+    // console.log(query);
     // Jalankan query dengan parameterized query untuk menghindari SQL Injection
     db.query(query, [id_kegiatan], (err, results) => {
         if (err) {
             callback(err, null);
             return;
         }
-        console.log(results);
+        // console.log(results);
         callback(null, results);
     });
 }
@@ -271,13 +271,13 @@ function authenticateTokenLevel2(req, res, next) {
 // mendapatkan informasi user dari token menggunakan fungsi ini
 function get_users_info(req, res, next) {
     const token = req.headers['token']
-    console.log("token : ", token);
+    // console.log("token : ", token);
     if (token == null) return res.sendStatus(401); // Unauthorized
 
     jwt.verify(token, secretKey, (err, user) => {
         if (err) return res.sendStatus(403); // Forbidden
         req.user = user;
-        console.log(req.user);
+        // console.log(req.user);
         next();
     });
 }
@@ -336,7 +336,7 @@ app.post("/check_username/:usrnm", (req,res) =>{
 
 // API Register User baru
 app.post("/register", authenticateToken, async (req,res) =>{
-    console.log(req.user);
+    // console.log(req.user);
     try{
         const { username, password, firstName, lastName, gender, role, status } = req.body;
         const hashedPass = await bcrypt.hash(password, 10);
@@ -350,7 +350,7 @@ app.post("/register", authenticateToken, async (req,res) =>{
                     "msg" : "Username Duplikat"
                 })
             }else{
-                console.log(query);
+                
                 db.query(query, (err,results) => {
                     if (err){
                         throw err;
@@ -380,9 +380,6 @@ app.post("/assign_petugas/:id_kegiatan", async (req, res) => {
         const promises = [];
 
         for (let i = 1; i <= Object.keys(data[0]).length; i++) {
-            console.log("ppl:", data[0][i.toString()]);
-            console.log("pml:", data[1][i.toString()]);
-            console.log("koseka:", data[2][i.toString()]);
             const k = "UPDATE `dokumen` SET `id_ppl` = '" + data[0][i.toString()] + "', `id_pml` = '" + data[1][i.toString()] + "', `id_koseka` = '" + data[2][i.toString()] + "' WHERE `dokumen`.`id_kegiatan` = '" + id + "' AND `dokumen`.`id_dok` = '" + i + "' ";
             promises.push(new Promise((resolve, reject) => {
                 db.query(k, (err, results) => {
@@ -417,7 +414,7 @@ app.post("/login", (req,res) => {
     try {
 
         const { username, password } = req.body;
-        console.log("IP : " , req.ip);
+        
         query = 'SELECT username,firstName,lastName,gender,role,pass FROM `users` WHERE `username`= "' + username + '";';
         db.query(query, (err,results) =>{
             if (!results.length){
@@ -445,7 +442,7 @@ app.post("/login", (req,res) => {
                             }
                             // TOKEN
                             const token = jwt.sign(info,secretKey);
-                            console.log("Login berhasil");
+                            
                             set_login(info.username);
                             res.status(200).json({
                                 msg:"Success",
@@ -569,7 +566,7 @@ app.post("/delete_kegiatan/:id_kegiatan", authenticateToken, (req,res) => {
     query = "DELETE FROM `kegiatan` WHERE id = '" + id + "';";
     info(id , (err,results) => {
         if (err) {
-            console.log("Terjadi kesalahan");
+            
             res.sendStatus(500);
         }
 
@@ -582,19 +579,19 @@ app.post("/delete_kegiatan/:id_kegiatan", authenticateToken, (req,res) => {
         }else{
             the_q = "DELETE FROM `sensus` WHERE id_kegiatan = '" + id +"';"
         }
-        console.log(the_q);
+        
         db.query(the_q, (err,res) => {
             if (err) throw err;
         })
 
         const q = "DELETE FROM `dokumen` WHERE id_kegiatan = '" + id +"';"
-        console.log(q);
+        
         db.query(q, (err,res) => {
             if (err) throw err;
         })
 
         const query = "DELETE FROM `kegiatan` WHERE id = '" + id +"'; "
-        console.log(query);
+        
         db.query(query, (err,ress) => {
             if (err) throw err;
         })
@@ -653,7 +650,7 @@ app.post("/get_all_mitra", (req,res) => {
 
             return item;
           });
-          console.log(newData);
+          
         res.status(200).send(newData);
     })
 })
@@ -667,7 +664,7 @@ app.post("/register_mitra", (req,res) => {
         const status = data.tugas
         const start_contract = data.start
         const end_contract = data.end
-        console.log(data);
+        
 
         db.query(query, [nama,status,start_contract,end_contract] , (err,results) => {
             if (err) throw err;
@@ -741,8 +738,8 @@ app.post("/fill_survei/:id_kegiatan", authenticateToken,(req,res) => {
                     the_query += ";";
                     the_query_2 += ";";
 
-                    console.log(the_query);
-                    console.log(the_query_2);
+                    // console.log(the_query);
+                    // console.log(the_query_2);
                     db.query(the_query, (err, results) =>{
                         if (err) throw err;
                     })
@@ -768,7 +765,7 @@ app.post("/get_progres_kecamatan_sensus/:id",(req,res) => {
     id_kegiatan = req.params.id;
     get_kec_sensus(id_kegiatan, (err,results) => {
         if (err) {
-            console.log("Terjadi kesalahan");
+            // console.log("Terjadi kesalahan");
             res.sendStatus(500);
             return;
         }
@@ -958,11 +955,14 @@ app.post("/get_progres_entri_sensus/:id_kegiatan", (req,res) => {
 app.post("/get_progres_sensus/:id_kegiatan", (req,res) => {
     id = req.params.id_kegiatan
     try {
-        const query = "SELECT (SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"' AND status_pengdok = '1') AS rb,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"' AND status_edcod = '1') AS edcod,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"' AND status_entri = '1') AS entri,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"') AS total,(SELECT MIN(tgl_pengdok) AS mulai_pengdok FROM sensus WHERE id_kegiatan = '" + id +"') AS start_pengdok,(SELECT MIN(tgl_edcod) AS mulai_pengdok FROM sensus WHERE id_kegiatan = '" + id +"') AS start_edcod,(SELECT MIN(tgl_entri) AS mulai_pengdok FROM sensus WHERE id_kegiatan = '" + id +"') AS start_entri;"
+        const query = "SELECT (SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"' AND status_pengdok = '1') AS rb,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"' AND status_edcod = '1') AS edcod,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"' AND status_entri = '1') AS entri,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"') AS total,(SELECT MIN(tgl_pengdok) AS mulai_pengdok FROM sensus WHERE id_kegiatan = '" + id +"') AS start_pengdok,(SELECT MIN(tgl_edcod) AS tgl_pengdok FROM sensus WHERE id_kegiatan = '" + id +"') AS start_edcod,(SELECT MIN(tgl_entri) AS tgl_entri FROM sensus WHERE id_kegiatan = '" + id +"') AS start_entri;"
         db.query(query, [id,id,id,id], (err,results) => {
             if(err){
                 throw err;
             }
+            // delay(10000).then(function idk() {
+            //     res.status(200).send(results);
+            // })
             res.status(200).send(results);
         })
     } catch (error) {
@@ -992,7 +992,7 @@ app.post("/get_all_users", (req,res) => {
         const query = "SELECT `username`, `firstName`, `lastName`, `role`, `status` FROM `users` ORDER BY `role`,`status` DESC;"
         db.query(query, (err,results) => {
             if (err) throw err;
-            console.log(results);
+            // console.log(results);
             res.status(200).send(results);
         })
     } catch (error) {
@@ -1065,16 +1065,16 @@ app.post("/check_id_kegiatan/:id_kegiatan", authenticateToken, (req,res) => {
     query = "SELECT * FROM `kegiatan` WHERE id = '" + id + "';";
     db.query(query, (err,results) => {
         if (err) throw err;
-        console.log(results);
+        // console.log(results);
         const l = results.length
-        console.log(l);
+        // console.log(l);
         if (l === 0){
             res.status(200).send({
                 msg: "Sukses",
                 bisa : true
             })
         }else{
-            console.log("else");
+            // console.log("else");
             res.status(200).send({
                 msg: "Gagal",
                 bisa : false
@@ -1125,9 +1125,9 @@ app.post("/get_sls2",(req,res) => {
 // API untuk mengubah isian tabel survei kolom RB
 app.post("/update_RB_survei", (req,res) => {
     const {id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_pengdok, penerima_dok, status_pengdok } = req.body;
-    console.log(id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_pengdok, penerima_dok, status_pengdok);
+    // console.log(id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_pengdok, penerima_dok, status_pengdok);
     let query = ''
-    if (penerima_dok !== undefined){
+    if (tgl_pengdok !== null){
         query = "UPDATE `survei` SET `status_pengdok` = '" + status_pengdok +"', `tgl_pengdok` = '" + tgl_pengdok +"', `penerima_dok` = '" + penerima_dok +"' WHERE `survei`.`id_kegiatan` = '" + id_kegiatan +"' AND `survei`.`no_blok_sensus` = '" + no_blok_sensus +"' AND `survei`.`no_kerangka_sampel` = '" + no_kerangka_sampel +"' AND `survei`.`no_ruta` = '" + no_ruta +"';"
     }else{
         query = "UPDATE `survei` SET `status_pengdok` = NULL, `tgl_pengdok` = NULL , `penerima_dok` = NULL WHERE `survei`.`id_kegiatan` = '" + id_kegiatan +"' AND `survei`.`no_blok_sensus` = '" + no_blok_sensus +"' AND `survei`.`no_kerangka_sampel` = '" + no_kerangka_sampel +"' AND `survei`.`no_ruta` = '" + no_ruta +"';"
@@ -1144,9 +1144,9 @@ app.post("/update_RB_survei", (req,res) => {
 // API untuk mengubah isian tabel survei kolom Edcod
 app.post("/update_Edcod_survei", (req,res) => {
     const {id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_edcod, petugas_edcod, status_edcod } = req.body;
-    console.log(id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_edcod, petugas_edcod, status_edcod);
+    // console.log(id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_edcod, petugas_edcod, status_edcod);
     let query = ''
-    if (petugas_edcod !== undefined){
+    if (tgl_edcod !== null){
         query = "UPDATE `survei` SET `status_edcod` = '" + status_edcod +"', `tgl_edcod` = '" + tgl_edcod +"', `petugas_edcod` = '" + petugas_edcod +"' WHERE `survei`.`id_kegiatan` = '" + id_kegiatan +"' AND `survei`.`no_blok_sensus` = '" + no_blok_sensus +"' AND `survei`.`no_kerangka_sampel` = '" + no_kerangka_sampel +"' AND `survei`.`no_ruta` = '" + no_ruta +"';"
     }else{
         query = "UPDATE `survei` SET `status_edcod` = NULL, `tgl_edcod` = NULL , `petugas_edcod` = NULL WHERE `survei`.`id_kegiatan` = '" + id_kegiatan +"' AND `survei`.`no_blok_sensus` = '" + no_blok_sensus +"' AND `survei`.`no_kerangka_sampel` = '" + no_kerangka_sampel +"' AND `survei`.`no_ruta` = '" + no_ruta +"';"
@@ -1163,9 +1163,9 @@ app.post("/update_Edcod_survei", (req,res) => {
 // API untuk mengubah isian tabel survei kolom Entri
 app.post("/update_Entri_survei", (req,res) => {
     const {id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_entri, petugas_entri, status_entri } = req.body;
-    console.log(id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_entri, petugas_entri, status_entri);
+    // console.log(id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_entri, petugas_entri, status_entri);
     let query = ''
-    if (petugas_entri !== undefined){
+    if (tgl_entri !== null){
         query = "UPDATE `survei` SET `status_entri` = '" + status_entri +"', `tgl_entri` = '" + tgl_entri +"', `petugas_entri` = '" + petugas_entri +"' WHERE `survei`.`id_kegiatan` = '" + id_kegiatan +"' AND `survei`.`no_blok_sensus` = '" + no_blok_sensus +"' AND `survei`.`no_kerangka_sampel` = '" + no_kerangka_sampel +"' AND `survei`.`no_ruta` = '" + no_ruta +"';"
     }else{
         query = "UPDATE `survei` SET `status_entri` = NULL, `tgl_entri` = NULL , `petugas_entri` = NULL WHERE `survei`.`id_kegiatan` = '" + id_kegiatan +"' AND `survei`.`no_blok_sensus` = '" + no_blok_sensus +"' AND `survei`.`no_kerangka_sampel` = '" + no_kerangka_sampel +"' AND `survei`.`no_ruta` = '" + no_ruta +"';"
@@ -1182,33 +1182,41 @@ app.post("/update_Entri_survei", (req,res) => {
 // API untuk mengubah isian tabel sensus kolom RB
 app.post("/update_RB", (req,res) => {
     const { id_kegiatan, id_dok, status_pengdok , tgl_pengdok, penerima_dok } = req.body;
-    console.log(req.body);
+    // console.log(req.body);
     let query = ''
-    if (penerima_dok === undefined){
-        query = "UPDATE `sensus` SET `status_pengdok` = NULL, `tgl_pengdok` = NULL, `penerima_dok` = NULL WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "';";
+    if (tgl_pengdok === null){
+        console.log('atas');
+        query += "UPDATE `sensus` SET `status_pengdok` = NULL, `tgl_pengdok` = NULL, `penerima_dok` = NULL WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "';";
     }else{
-        query = "UPDATE `sensus` SET `status_pengdok` = '" + status_pengdok + "', `tgl_pengdok` = '" + tgl_pengdok + "', `penerima_dok` = '" + penerima_dok + "' WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "';";
+        console.log('bawah');
+        query += "UPDATE `sensus` SET `status_pengdok` = '" + status_pengdok + "', `tgl_pengdok` = '" + tgl_pengdok + "', `penerima_dok` = '" + penerima_dok + "' WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "';";
     }
-    
+    // 
+    console.log(query);
+
     db.query(query, (err,results) => {
         if (err) throw err;
         res.status(200).send({
             msg: "Update Berhasil"
         });
     })
-    console.log(id_kegiatan,status_pengdok,tgl_pengdok,penerima_dok,id_dok);
+    // console.log(id_kegiatan,status_pengdok,tgl_pengdok,penerima_dok,id_dok);
 })
 
 // API untuk mengubah isian tabel sensus kolom Edcod
 app.post("/update_Edcod", (req,res) => {
     const { id_kegiatan, id_dok, status_edcod , tgl_edcod, petugas_edcod } = req.body;
-    console.log(req.body);
+    // console.log(req.body);
 
-    if (petugas_edcod === undefined){
-        query = "UPDATE `sensus` SET `status_edcod` = NULL, `tgl_edcod` = NULL, `petugas_edcod` = NULL WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "'";
+    let query = ""
+
+    if (tgl_edcod === null){
+        query += "UPDATE `sensus` SET `status_edcod` = NULL, `tgl_edcod` = NULL, `petugas_edcod` = NULL WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "'";
     }else{
-        query = "UPDATE `sensus` SET `status_edcod` = '" + status_edcod + "', `tgl_edcod` = '" + tgl_edcod + "', `petugas_edcod` = '" + petugas_edcod + "' WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "'";
+        query += "UPDATE `sensus` SET `status_edcod` = '" + status_edcod + "', `tgl_edcod` = '" + tgl_edcod + "', `petugas_edcod` = '" + petugas_edcod + "' WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "'";
     }
+
+    // console.log(query);
 
     db.query(query, (err,results) => {
         if (err) throw err;
@@ -1216,21 +1224,21 @@ app.post("/update_Edcod", (req,res) => {
             msg: "Update Berhasil"
         });
     });
-    console.log(id_kegiatan,id_dok, status_edcod, tgl_edcod, petugas_edcod);
+    // console.log(id_kegiatan,id_dok, status_edcod, tgl_edcod, petugas_edcod);
 })
 
 // API untuk mengubah isian tabel sensus kolom Entri
 app.post("/update_Entri", (req,res) => {
     const { id_kegiatan, id_dok, status_entri , tgl_entri, petugas_entri, moda } = req.body;
-    console.log(req.body);
+    // console.log(req.body);
     let query = ''
-    if (petugas_entri === undefined){
+    if (tgl_entri === null){
         query = "UPDATE `sensus` SET `status_entri` = NULL, `tgl_entri` = NULL, `petugas_entri` = NULL, `moda_entri` = NULL WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "';";
     }else{
         query = "UPDATE `sensus` SET `status_entri` = '" + status_entri + "', `tgl_entri` = '" + tgl_entri + "', `petugas_entri` = '" + petugas_entri + "', `moda_entri` = '" + moda +"' WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "';";
     }
 
-    console.log(query);
+    // console.log(query);
     // console.log(id_kegiatan,status_entri,tgl_entri,petugas_entri,id_dok);
 
     db.query(query, (err,results) => {
@@ -1252,11 +1260,11 @@ app.post("/progres_petugas_survei/:id_kegiatan", (req,res) => {
         }
         // json_query.pengdok = get_penerima_dok(id);
         json_query.petugas_edcod = get_petugas_edcod(id);
-        console.log(get_penerima_dok(id));
-        console.log(json_query);
+        // console.log(get_penerima_dok(id));
+        // console.log(json_query);
         res.status(200).send(json_query);
     } catch (error) {
-            console.log(error);
+            // console.log(error);
     }
 })
 
