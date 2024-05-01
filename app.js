@@ -3,6 +3,9 @@ var db = require('./dbconn');
 var write_log = require('./writeLog');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const XLSX = require('xlsx');
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
 
 // agar API bisa diakses
 const cors = require('cors');
@@ -319,6 +322,29 @@ app.get('/files/:filename', (req, res) => {
 ////////////////////////////////////////////////////////////////////
 // POST
 ////////////////////////////////////////////////////////////////////
+
+// API untuk menerima file upload dari frontend
+app.post('/upload', upload.single('file'), (req, res) => {
+    const file = req.file;
+    if (!file) {
+        return res.status(400).send('No file uploaded');
+    }
+    
+    // Baca file Excel yang diunggah
+    const workbook = XLSX.readFile(file.path);
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    
+    // Konversi data Excel menjadi JSON
+    const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+    // Lakukan sesuatu dengan data JSON, misalnya kirimkan kembali sebagai respons atau simpan ke database
+    console.log('Data from Excel:', jsonData);
+
+    // Tanggapi dengan hasil pemrosesan
+    res.status(200).json({ data: jsonData });
+});
+
 
 // API Check Username sudah ada atau belum di database
 app.post("/check_username/:usrnm", (req,res) =>{
