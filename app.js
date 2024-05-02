@@ -387,8 +387,23 @@ app.post('/upload', upload.single('file'), (req, res) => {
     query_survei = query_survei.slice(0,-1)
     query_survei += ";"
 
-    console.log(query_dokumen);
-    console.log(query_survei);
+    db.query(query_dokumen, (err,resulsts) => {
+        if (err){
+            res.status(400).send({
+                msg : "Unknown Error",
+                data : err
+            })
+        }
+    })
+
+    db.query(query_survei, (err,resulsts) => {
+        if (err){
+            res.status(400).send({
+                msg : "Unknown Error",
+                data : err
+            })
+        }
+    })
 
     // Tanggapi dengan hasil pemrosesan
     res.status(200).json({ 
