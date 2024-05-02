@@ -247,7 +247,7 @@ function authenticateToken(req, res, next) {
     jwt.verify(token, secretKey, (err, user) => {
         if (err) return res.sendStatus(403); // Forbidden
         req.user = user;
-        if (user.role === 'admin'){
+        if (user.role === 'Admin'){
             next();
         }else{
             res.sendStatus(403); // Forbidden
@@ -326,6 +326,7 @@ app.get('/files/:filename', (req, res) => {
 // API untuk menerima file upload dari frontend
 app.post('/upload', upload.single('file'), (req, res) => {
     const file = req.file;
+    const id = req.body.id_kegiatan
     if (!file) {
         return res.status(400).send('No file uploaded');
     }
@@ -339,10 +340,61 @@ app.post('/upload', upload.single('file'), (req, res) => {
     const jsonData = XLSX.utils.sheet_to_json(sheet);
 
     // Lakukan sesuatu dengan data JSON, misalnya kirimkan kembali sebagai respons atau simpan ke database
-    console.log('Data from Excel:', jsonData);
+    // console.log('Data from Excel:', jsonData[0]);
+    // console.log("id_kegiatan", id);
+
+    let query_dokumen = "INSERT INTO `dokumen`(`id_kegiatan`, `id_dok`, `kode_sls`, `id_x`, `kode_desa`, `kode_kec`, `ppl`, `pml`, `koseka`, `jenis`) VALUES "
+    let query_survei = "INSERT INTO `survei`(`id_kegiatan`, `id_dok`, `no_blok_sensus`, `no_kerangka_sampel`, `no_ruta`, `KRT`) VALUES "
+
+    const values_dokumen = "('[value-1]','[value-2]','[value-3]','[value-4]','[value-5]','[value-6]','[value-7]','[value-8]','[value-9]','[value-10]')"
+    const values_survei = "('[value-1]','[value-2]','[value-3]','[value-4]','[value-5]','[value-6]')"
+    // Loop through each object in the array
+
+    let id_dok = 1
+    for (let i = 0; i < jsonData.length; i++) {
+        const obj = jsonData[i];
+
+        let sls = '';
+        let desa = '';
+        let kec = '';
+        let ppl = '';
+        let pml = '';
+        let koseka = '';
+
+        query_dokumen += "('" + id + "','" + id_dok + "','" + obj["SLS"] + "','" + "-" + "','" + obj["Desa"] + "','" + obj["Kecamatan"] + "','" + obj["Pencacah"] + "','" + obj["Pengawas"] + "','" + "-" + "', '" + "2" + "'),"
+
+        // Loop through each key-value pair in the object
+        for (const key in obj) {
+           
+            // console.log(id_dok);
+            
+            if (key.includes("Ruta")){
+                const value = obj[key];
+                const str = key
+                const startIndex = str.indexOf(' ') + 1;
+                const ruta = str.slice(startIndex); 
+                
+                query_survei += "('" + id + "','" + id_dok + "','" + obj["NBS"] + "','" + obj["NKS"] + "','" + ruta + "','" + value + "'),"
+               
+            }
+        }
+
+        id_dok +=1 ;
+    }
+
+    query_dokumen = query_dokumen.slice(0,-1)
+    query_dokumen += ";"
+    query_survei = query_survei.slice(0,-1)
+    query_survei += ";"
+
+    console.log(query_dokumen);
+    console.log(query_survei);
 
     // Tanggapi dengan hasil pemrosesan
-    res.status(200).json({ data: jsonData });
+    res.status(200).json({ 
+        msg : "Success",
+        data: jsonData
+     });
 });
 
 
@@ -739,7 +791,7 @@ app.post("/fill_survei/:id_kegiatan", authenticateToken,(req,res) => {
                     }
                     const kode_daerah = results
                     // generate query
-                    the_query = "INSERT INTO `dokumen`(`id_kegiatan`, `id_dok`, `kode_sls`, `id_x`, `kode_desa`, `kode_kec`, `id_ppl`, `id_pml`, `id_koseka`, `jenis`) VALUES "
+                    the_query = "INSERT INTO `dokumen`(`id_kegiatan`, `id_dok`, `kode_sls`, `id_x`, `kode_desa`, `kode_kec`, `ppl`, `pml`, `koseka`, `jenis`) VALUES "
                     the_query_2 = "INSERT INTO `survei`(`id_kegiatan`, `id_dok`, `no_blok_sensus`, `no_kerangka_sampel`, `no_ruta`, `KRT`) VALUES "
                     
                     // id_dok start from 1
@@ -1013,7 +1065,7 @@ app.post("/get_progres_survei/:id_kegiatan", (req,res) => {
 })
 
 // API untuk mendapatkan semua users (digunakan untuk assign petugas)
-app.post("/get_all_users", (req,res) => {
+app.post("/get_all_users", authenticateToken, (req,res) => {
     try {
         const query = "SELECT `username`, `firstName`, `lastName`, `role`, `status` FROM `users` ORDER BY `role`,`status` DESC;"
         db.query(query, (err,results) => {
