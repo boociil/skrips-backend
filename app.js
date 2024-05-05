@@ -330,6 +330,15 @@ app.post('/upload', upload.single('file'), (req, res) => {
     if (!file) {
         return res.status(400).send('No file uploaded');
     }
+
+    // Validasi ekstensi file
+    const allowedExtensions = ['.xlsx'];
+    const fileExtension = path.extname(file.originalname);
+    if (!allowedExtensions.includes(fileExtension)) {
+        return res.status(400).send({
+            msg : "File"
+        });
+    }
     
     // Baca file Excel yang diunggah
     const workbook = XLSX.readFile(file.path);
@@ -353,13 +362,6 @@ app.post('/upload', upload.single('file'), (req, res) => {
     let id_dok = 1
     for (let i = 0; i < jsonData.length; i++) {
         const obj = jsonData[i];
-
-        let sls = '';
-        let desa = '';
-        let kec = '';
-        let ppl = '';
-        let pml = '';
-        let koseka = '';
 
         query_dokumen += "('" + id + "','" + id_dok + "','" + obj["SLS"] + "','" + "-" + "','" + obj["Desa"] + "','" + obj["Kecamatan"] + "','" + obj["Pencacah"] + "','" + obj["Pengawas"] + "','" + "-" + "', '" + "2" + "'),"
 
@@ -387,25 +389,26 @@ app.post('/upload', upload.single('file'), (req, res) => {
     query_survei = query_survei.slice(0,-1)
     query_survei += ";"
 
-    db.query(query_dokumen, (err,resulsts) => {
-        if (err){
-            res.status(400).send({
-                msg : "Unknown Error",
-                data : err
-            })
-        }
-    })
+    // db.query(query_dokumen, (err,resulsts) => {
+    //     if (err){
+    //         res.status(400).send({
+    //             msg : "Unknown Error",
+    //             data : err
+    //         })
+    //     }
+    // })
 
-    db.query(query_survei, (err,resulsts) => {
-        if (err){
-            res.status(400).send({
-                msg : "Unknown Error",
-                data : err
-            })
-        }
-    })
+    // db.query(query_survei, (err,resulsts) => {
+    //     if (err){
+    //         res.status(400).send({
+    //             msg : "Unknown Error",
+    //             data : err
+    //         })
+    //     }
+    // })
 
     // Tanggapi dengan hasil pemrosesan
+    change_stats(id,2)
     res.status(200).json({ 
         msg : "Success",
         data: jsonData
@@ -473,7 +476,7 @@ app.post("/assign_petugas/:id_kegiatan", async (req, res) => {
         const promises = [];
 
         for (let i = 1; i <= Object.keys(data[0]).length; i++) {
-            const k = "UPDATE `dokumen` SET `id_ppl` = '" + data[0][i.toString()] + "', `id_pml` = '" + data[1][i.toString()] + "', `id_koseka` = '" + data[2][i.toString()] + "' WHERE `dokumen`.`id_kegiatan` = '" + id + "' AND `dokumen`.`id_dok` = '" + i + "' ";
+            const k = "UPDATE `dokumen` SET `ppl` = '" + data[0][i.toString()] + "', `pml` = '" + data[1][i.toString()] + "', `koseka` = '" + data[2][i.toString()] + "' WHERE `dokumen`.`id_kegiatan` = '" + id + "' AND `dokumen`.`id_dok` = '" + i + "' ";
             promises.push(new Promise((resolve, reject) => {
                 db.query(k, (err, results) => {
                     if (err) {
@@ -541,6 +544,7 @@ app.post("/login", (req,res) => {
                                 msg:"Success",
                                 accessToken : token,
                                 role : results[0].role,
+                                username : info.username
                             })
                            
                             
@@ -1112,7 +1116,7 @@ app.post("/fill_sensus/:id_kegiatan", authenticateToken ,(req,res) => {
                     }
                     const kode_daerah = results
                     // generate query
-                    the_query = "INSERT INTO `dokumen`(`id_kegiatan`, `id_dok`, `kode_sls`, `kode_desa`, `kode_kec`, `id_ppl`, `id_pml`, `id_koseka`, `jenis`) VALUES "
+                    the_query = "INSERT INTO `dokumen`(`id_kegiatan`, `id_dok`, `kode_sls`, `kode_desa`, `kode_kec`, `ppl`, `pml`, `koseka`, `jenis`) VALUES "
                     the_query_2 = "INSERT INTO `sensus`(`id_kegiatan`, `id_dok`) VALUES "
                     // id_dok start from 1
         
@@ -1179,7 +1183,7 @@ app.post("/check_id_kegiatan/:id_kegiatan", authenticateToken, (req,res) => {
 // API untuk mendapatkan kode wilayah, dan status pengolahan sensus, parameter : id_kegiatan (id kegiatan sensus)
 app.post("/get_pengolahan_data/:id_kegiatan", (req,res) => {
     id_kegiatan = req.params.id_kegiatan
-    query = "SELECT dokumen.id_dok, dokumen.kode_kec, kecamatan.nama AS 'Kec', dokumen.kode_desa, desa.nama AS 'Desa' ,dokumen.kode_sls, sls.nama_x AS 'SLS', dokumen.id_ppl, dokumen.id_pml, dokumen.id_koseka, sensus.total_dokumen, sensus.tgl_pengdok, sensus.penerima_dok, sensus.status_pengdok, sensus.status_edcod, sensus.petugas_edcod, sensus.tgl_edcod, sensus.status_entri, sensus.petugas_entri, sensus.moda_entri, sensus.tgl_entri FROM `dokumen` INNER JOIN sensus on dokumen.id_kegiatan = sensus.id_kegiatan AND dokumen.id_dok = sensus.id_dok INNER JOIN kecamatan on kecamatan.kode = dokumen.kode_kec INNER JOIN desa on desa.kode = dokumen.kode_desa AND dokumen.kode_kec = desa.kode_kec INNER JOIN sls on sls.kode = dokumen.kode_sls AND sls.kode_desa = dokumen.kode_desa AND sls.kode_kec = dokumen.kode_kec WHERE dokumen.id_kegiatan = '" + id_kegiatan + "' AND sensus.id_kegiatan = '" + id_kegiatan + "' ORDER BY dokumen.kode_kec, dokumen.kode_desa, dokumen.kode_sls ASC;"
+    query = "SELECT dokumen.id_dok, dokumen.kode_kec, kecamatan.nama AS 'Kec', dokumen.kode_desa, desa.nama AS 'Desa' ,dokumen.kode_sls, sls.nama_x AS 'SLS', dokumen.ppl, dokumen.pml, dokumen.koseka, sensus.total_dokumen, sensus.tgl_pengdok, sensus.penerima_dok, sensus.status_pengdok, sensus.status_edcod, sensus.petugas_edcod, sensus.tgl_edcod, sensus.status_entri, sensus.petugas_entri, sensus.moda_entri, sensus.tgl_entri FROM `dokumen` INNER JOIN sensus on dokumen.id_kegiatan = sensus.id_kegiatan AND dokumen.id_dok = sensus.id_dok INNER JOIN kecamatan on kecamatan.kode = dokumen.kode_kec INNER JOIN desa on desa.kode = dokumen.kode_desa AND dokumen.kode_kec = desa.kode_kec INNER JOIN sls on sls.kode = dokumen.kode_sls AND sls.kode_desa = dokumen.kode_desa AND sls.kode_kec = dokumen.kode_kec WHERE dokumen.id_kegiatan = '" + id_kegiatan + "' AND sensus.id_kegiatan = '" + id_kegiatan + "' ORDER BY dokumen.kode_kec, dokumen.kode_desa, dokumen.kode_sls ASC;"
     db.query(query, (err,results) => {
         if (err) throw err;
         res.status(200).send(results);
@@ -1190,7 +1194,7 @@ app.post("/get_pengolahan_data/:id_kegiatan", (req,res) => {
 // API untuk mendapatkan kode wilayah, dan status pengolahan sensus, parameter : id_kegiatan (id kegiatan survei)
 app.post("/get_pengolahan_data_survei/:id_kegiatan", (req,res) => {
     id_kegiatan = req.params.id_kegiatan
-    query = "SELECT dokumen.id_dok, dokumen.kode_kec, kecamatan.nama AS 'Kec', dokumen.kode_desa, desa.nama AS 'Desa' , dokumen.id_x AS 'id_x' , x.nama AS 'nama_x', survei.no_blok_sensus, survei.KRT, survei.no_kerangka_sampel , survei.no_ruta AS 'no_ruta', dokumen.id_ppl, dokumen.id_pml, dokumen.id_koseka, survei.tgl_pengdok, survei.penerima_dok, survei.status_pengdok, survei.status_edcod, survei.petugas_edcod, survei.tgl_edcod, survei.status_entri, survei.petugas_entri, survei.moda_entri, survei.tgl_entri FROM dokumen INNER JOIN kecamatan on kecamatan.kode = dokumen.kode_kec INNER JOIN desa on desa.kode = dokumen.kode_desa AND dokumen.kode_kec = desa.kode_kec INNER JOIN x on x.id = dokumen.id_x AND x.kode_desa = dokumen.kode_desa AND x.kode_kec = dokumen.kode_kec INNER JOIN survei on dokumen.id_kegiatan = survei.id_kegiatan AND dokumen.id_dok = survei.id_dok WHERE dokumen.id_kegiatan = '" + id_kegiatan + "' AND survei.id_kegiatan = '" + id_kegiatan + "';"
+    query = "SELECT dokumen.id_dok, dokumen.kode_kec, kecamatan.nama AS 'Kec', dokumen.kode_desa, desa.nama AS 'Desa' , dokumen.id_x AS 'id_x' , x.nama AS 'nama_x', survei.no_blok_sensus, survei.KRT, survei.no_kerangka_sampel , survei.no_ruta AS 'no_ruta', dokumen.ppl, dokumen.pml, dokumen.koseka, survei.tgl_pengdok, survei.penerima_dok, survei.status_pengdok, survei.status_edcod, survei.petugas_edcod, survei.tgl_edcod, survei.status_entri, survei.petugas_entri, survei.moda_entri, survei.tgl_entri FROM dokumen INNER JOIN kecamatan on kecamatan.kode = dokumen.kode_kec INNER JOIN desa on desa.kode = dokumen.kode_desa AND dokumen.kode_kec = desa.kode_kec INNER JOIN x on x.id = dokumen.id_x AND x.kode_desa = dokumen.kode_desa AND x.kode_kec = dokumen.kode_kec INNER JOIN survei on dokumen.id_kegiatan = survei.id_kegiatan AND dokumen.id_dok = survei.id_dok WHERE dokumen.id_kegiatan = '" + id_kegiatan + "' AND survei.id_kegiatan = '" + id_kegiatan + "';"
     db.query(query, (err,results) => {
         if (err) throw err;
         res.status(200).send(results);
