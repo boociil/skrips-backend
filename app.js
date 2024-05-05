@@ -63,8 +63,6 @@ function check_username(username) {
                 reject(err);
             }else{
                 const l = results.length
-                // console.log("Total username ada di database : " + l);
-                // console.log("l : " + l);
                 resolve(l);
             }
         });
@@ -274,7 +272,7 @@ function authenticateTokenLevel2(req, res, next) {
 // mendapatkan informasi user dari token menggunakan fungsi ini
 function get_users_info(req, res, next) {
     const token = req.headers['token']
-    // console.log("token : ", token);
+    console.log("token : ", token);
     if (token == null) return res.sendStatus(401); // Unauthorized
 
     jwt.verify(token, secretKey, (err, user) => {
@@ -389,23 +387,23 @@ app.post('/upload', upload.single('file'), (req, res) => {
     query_survei = query_survei.slice(0,-1)
     query_survei += ";"
 
-    // db.query(query_dokumen, (err,resulsts) => {
-    //     if (err){
-    //         res.status(400).send({
-    //             msg : "Unknown Error",
-    //             data : err
-    //         })
-    //     }
-    // })
+    db.query(query_dokumen, (err,resulsts) => {
+        if (err){
+            res.status(400).send({
+                msg : "Unknown Error",
+                data : err
+            })
+        }
+    })
 
-    // db.query(query_survei, (err,resulsts) => {
-    //     if (err){
-    //         res.status(400).send({
-    //             msg : "Unknown Error",
-    //             data : err
-    //         })
-    //     }
-    // })
+    db.query(query_survei, (err,resulsts) => {
+        if (err){
+            res.status(400).send({
+                msg : "Unknown Error",
+                data : err
+            })
+        }
+    })
 
     // Tanggapi dengan hasil pemrosesan
     change_stats(id,2)
@@ -414,6 +412,31 @@ app.post('/upload', upload.single('file'), (req, res) => {
         data: jsonData
      });
 });
+
+// API untuk mendapatkan activity dari user
+app.post("/get_user_activity/:username", (req,res) => {
+    const usr = req.params.username;
+    check_username(usr)
+    .then(l => {
+        if (l != 0){
+            const query = "SELECT * FROM `users_activity` WHERE username = ? ;";
+            db.query(query, [usr], (err,results) => {
+                if (err){
+                    res.status(400).send({
+                        msg: "Failed",
+                    })
+                }else{
+                    res.status(200).send(results);
+                }
+            })
+            
+        }else{
+            res.status(400).send({
+                msg: "No User",
+            })
+        }
+    })
+})
 
 
 // API Check Username sudah ada atau belum di database
@@ -446,7 +469,6 @@ app.post("/register", authenticateToken, async (req,res) =>{
                     "msg" : "Username Duplikat"
                 })
             }else{
-                
                 db.query(query, (err,results) => {
                     if (err){
                         throw err;
@@ -577,7 +599,27 @@ app.post("/logout", get_users_info ,(req,res) => {
     }
 });
 
-
+// API untuk mendapatkan informasi dari suatu user
+app.post("/get_users_info/:username", authenticateToken ,(req,res) => {
+    try {
+        const info = req.user;
+        const username = info.username;
+        const role = info.role
+        const firstName = info.firstName
+        const lastName = info.lastName
+        res.status(200).send({
+            username : username,
+            role : role,
+            firstName : firstName,
+            lastName : lastName,
+        })
+        
+    } catch (error) {
+        res.status(200).send({
+            msg: error
+        })
+    }
+});
 
 // API Register Kegiatan Baru
 app.post("/add_kegiatan", authenticateToken, async (req,res) => {
