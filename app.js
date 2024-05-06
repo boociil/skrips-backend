@@ -419,7 +419,7 @@ app.post("/get_user_activity/:username", (req,res) => {
     check_username(usr)
     .then(l => {
         if (l != 0){
-            const query = "SELECT * FROM `users_activity` WHERE username = ? ;";
+            const query = "SELECT * FROM `users_activity` WHERE username = ? ORDER BY time DESC;";
             db.query(query, [usr], (err,results) => {
                 if (err){
                     res.status(400).send({
@@ -602,18 +602,26 @@ app.post("/logout", get_users_info ,(req,res) => {
 // API untuk mendapatkan informasi dari suatu user
 app.post("/get_users_info/:username", authenticateToken ,(req,res) => {
     try {
-        const info = req.user;
-        const username = info.username;
-        const role = info.role
-        const firstName = info.firstName
-        const lastName = info.lastName
-        res.status(200).send({
-            username : username,
-            role : role,
-            firstName : firstName,
-            lastName : lastName,
+        const username = req.params.username;
+        check_username(username)
+        .then(l => {
+            if (l != 0){
+                const query = "SELECT username,firstName,lastName,role,gender,status FROM `users` WHERE username = ? ;";
+                db.query(query, [username], (err,results) => {
+                    if (err){
+                        res.status(400).send({
+                            msg: "Failed",
+                        })
+                    }else{
+                        res.status(200).send(results);
+                    }
+                })
+            }else{
+                res.status(400).send({
+                    msg: "No User",
+                })
+            }
         })
-        
     } catch (error) {
         res.status(200).send({
             msg: error
@@ -1417,4 +1425,5 @@ app.post("/test", (req,res) => {
 
 //END OF POST//////////////////////////////////////////////////
 write_log(`Program berjalan di http://localhost:${port}, time : ${currentTime}`);
+console.clear()
 app.listen(port, () => console.log(`Program berjalan di http://localhost:${port}, time : ${currentTime}`));
