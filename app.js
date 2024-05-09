@@ -321,6 +321,97 @@ app.get('/files/:filename', (req, res) => {
 // POST
 ////////////////////////////////////////////////////////////////////
 
+// API untuk mendapatkan tgl progres
+app.post('/progres_bar/:id_kegiatan', (req,res) => {
+    const jenis = req.params.jenis;
+    const id = req.params.id_kegiatan;
+
+    info(id , (err,results) => {
+        if (err) {
+            res.sendStatus(500);
+        }
+
+        const data = results;
+        const jenis = data[0].jenis
+
+        let the_q = ""
+        if (jenis === "2"){
+            the_q = "survei"
+        }else{
+            the_q = "sensus"
+        }
+
+        const query = `
+        SELECT 
+            'tgl_pengdok' AS jenis_data,
+            YEAR(tgl_pengdok) AS tahun,
+            MONTH(tgl_pengdok) AS bulan,
+            CASE
+                WHEN DAYOFMONTH(tgl_pengdok) <= 7 THEN 'Minggu ke-1'
+                WHEN DAYOFMONTH(tgl_pengdok) <= 14 THEN 'Minggu ke-2'
+                WHEN DAYOFMONTH(tgl_pengdok) <= 21 THEN 'Minggu ke-3'
+                ELSE 'Minggu ke-4'
+            END AS minggu,
+            COUNT(*) AS frekuensi
+        FROM 
+            ${the_q}
+        WHERE 
+            tgl_pengdok IS NOT NULL AND id_kegiatan = ?
+        GROUP BY 
+            jenis_data, tahun, bulan, minggu
+
+        UNION ALL
+
+        SELECT 
+            'tgl_edcod' AS jenis_data,
+            YEAR(tgl_edcod) AS tahun,
+            MONTH(tgl_edcod) AS bulan,
+            CASE
+                WHEN DAYOFMONTH(tgl_edcod) <= 7 THEN 'Minggu ke-1'
+                WHEN DAYOFMONTH(tgl_edcod) <= 14 THEN 'Minggu ke-2'
+                WHEN DAYOFMONTH(tgl_edcod) <= 21 THEN 'Minggu ke-3'
+                ELSE 'Minggu ke-4'
+            END AS minggu,
+            COUNT(*) AS frekuensi
+        FROM 
+            ${the_q}
+        WHERE 
+            tgl_edcod IS NOT NULL AND id_kegiatan = ?
+        GROUP BY 
+            jenis_data, tahun, bulan, minggu
+
+
+        UNION ALL
+
+        SELECT 
+            'tgl_entri' AS jenis_data,
+            YEAR(tgl_entri) AS tahun,
+            MONTH(tgl_entri) AS bulan,
+            CASE
+                WHEN DAYOFMONTH(tgl_entri) <= 7 THEN 'Minggu ke-1'
+                WHEN DAYOFMONTH(tgl_entri) <= 14 THEN 'Minggu ke-2'
+                WHEN DAYOFMONTH(tgl_entri) <= 21 THEN 'Minggu ke-3'
+                ELSE 'Minggu ke-4'
+            END AS minggu,
+            COUNT(*) AS frekuensi
+        FROM 
+            ${the_q}
+        WHERE 
+            tgl_entri IS NOT NULL AND id_kegiatan = ?
+        GROUP BY 
+            jenis_data, tahun, bulan, minggu;
+        `;
+        console.log(query);
+        db.query(query, [id,id,id], (err, results) => {
+            console.log(query);
+            if (err){
+                res.status(400).send({msg:err});
+            }
+            res.status(200).send(results);
+        });
+    })
+})
+
 // API untuk menerima file upload dari frontend
 app.post('/upload', upload.single('file'), (req, res) => {
     const file = req.file;
@@ -401,7 +492,7 @@ app.post('/upload', upload.single('file'), (req, res) => {
             res.status(400).send({
                 msg : "Unknown Error",
                 data : err
-            })
+        })
         }
     })
 

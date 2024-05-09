@@ -118,3 +118,67 @@ INSERT INTO `mitra` (`id`, `nama`, `status`, `start_contract`, `end_contract`) V
 
 
 /////////////////////////////////
+
+MENGAMBIL FREKUENSI PER BULAN, PER MINGGU (DIGUNAKAN UNTUK GRAPH)
+---------------------------------
+SELECT 
+    'tgl_pengdok' AS jenis_data,
+    YEAR(tgl_pengdok) AS tahun,
+    MONTH(tgl_pengdok) AS bulan,
+    CASE
+        WHEN DAYOFMONTH(tgl_pengdok) <= 7 THEN 'Minggu ke-1'
+        WHEN DAYOFMONTH(tgl_pengdok) <= 14 THEN 'Minggu ke-2'
+        WHEN DAYOFMONTH(tgl_pengdok) <= 21 THEN 'Minggu ke-3'
+        ELSE 'Minggu ke-4'
+    END AS minggu,
+    COUNT(*) AS frekuensi
+FROM 
+    sensus
+WHERE 
+    tgl_pengdok IS NOT NULL AND id_kegiatan = 'ST2023'
+GROUP BY 
+    jenis_data, tahun, bulan, minggu
+
+UNION ALL
+
+SELECT 
+    'tgl_edcod' AS jenis_data,
+    YEAR(tgl_edcod) AS tahun,
+    MONTH(tgl_edcod) AS bulan,
+    CASE
+        WHEN DAYOFMONTH(tgl_edcod) <= 7 THEN 'Minggu ke-1'
+        WHEN DAYOFMONTH(tgl_edcod) <= 14 THEN 'Minggu ke-2'
+        WHEN DAYOFMONTH(tgl_edcod) <= 21 THEN 'Minggu ke-3'
+        ELSE 'Minggu ke-4'
+    END AS minggu,
+    COUNT(*) AS frekuensi
+FROM 
+    sensus
+WHERE 
+    tgl_edcod IS NOT NULL AND id_kegiatan = 'ST2023'
+GROUP BY 
+    jenis_data, tahun, bulan, minggu
+
+
+UNION ALL
+
+SELECT 
+    'tgl_entri' AS jenis_data,
+    YEAR(tgl_entri) AS tahun,
+    MONTH(tgl_entri) AS bulan,
+    CASE
+        WHEN DAYOFMONTH(tgl_entri) <= 7 THEN 'Minggu ke-1'
+        WHEN DAYOFMONTH(tgl_entri) <= 14 THEN 'Minggu ke-2'
+        WHEN DAYOFMONTH(tgl_entri) <= 21 THEN 'Minggu ke-3'
+        ELSE 'Minggu ke-4'
+    END AS minggu,
+    COUNT(*) AS frekuensi
+FROM 
+    sensus
+WHERE 
+    tgl_entri IS NOT NULL AND id_kegiatan = 'ST2023'
+GROUP BY 
+    jenis_data, tahun, bulan, minggu;
+
+
+/////////////////////////////////
