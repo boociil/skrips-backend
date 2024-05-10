@@ -401,9 +401,8 @@ app.post('/progres_bar/:id_kegiatan', (req,res) => {
         GROUP BY 
             jenis_data, tahun, bulan, minggu;
         `;
-        console.log(query);
         db.query(query, [id,id,id], (err, results) => {
-            console.log(query);
+
             if (err){
                 res.status(400).send({msg:err});
             }
@@ -657,8 +656,77 @@ app.post("/login", (req,res) => {
                                 msg:"Success",
                                 accessToken : token,
                                 role : results[0].role,
-                                username : info.username
+                                username : info.username,
+                                fullName : info.firstName + " " + info.lastName
                             })
+                           
+                            
+                        } else {
+                            // Jika Kesalahan berada pada password
+                            res.status(400).send({msg:"Password", accessToken : "-"});
+                        }
+                    }
+                });
+            }
+        });
+    } catch (error) {
+        res.status(500).send("Terjadi Kesalahan")
+    }
+});
+
+
+app.post("/update_users", (req,res) => {
+    
+    try {
+
+        const { username, password, newPass, role } = req.body;
+        
+        // check apakah terdapat kesalahan username
+        const query = 'SELECT username,firstName,lastName,gender,role,pass FROM `users` WHERE `username`= "' + username + '";';
+        db.query(query, (err,results) =>{
+            if (!results.length){
+                // Jika Kesalahan berada pada username
+                res.status(400).send({
+                    msg : "Username",
+                    accessToken : "-",
+                });
+            }else{
+                let hashed_pass = results[0].pass;
+                bcrypt.compare(password, hashed_pass, function(err,resultss){
+                    if (err) {
+                        // Kesalahan selama pembandingan
+                        console.error('Error during password comparison:', err);
+                    } else {
+                        // Hasil pembandingan
+                        if (resultss) {
+                            // Update Password disini
+                            const newHashedPass = bcrypt.hash(newPass, 10);
+                            const query_update = `UPDATE 'users' SET 'pass'='${newHashedPass}' ${role !== null ? (`,'role'='${role}'`) : ('')} WHERE username = ? `
+                            db.query(query_update, [id], (err,results) => {
+                                if (err){
+                                    res.status(500).send({msg:"internal server error"})
+                                }
+                            })
+
+                            // Informasi yang terkandung dalam token
+                            const info = {
+                                "username": results[0].username,
+                                "firstName": results[0].firstName,
+                                "lastName": results[0].lastName,
+                                "gender": results[0].gender,
+                                "role": results[0].role,
+                            }
+                            // TOKEN
+                            // const token = jwt.sign(info,secretKey);
+                            
+                            // set_login(info.username);
+                            // res.status(200).json({
+                            //     msg:"Success",
+                            //     accessToken : token,
+                            //     role : results[0].role,
+                            //     username : info.username,
+                            //     fullName : info.firstName + " " + info.lastName
+                            // })
                            
                             
                         } else {

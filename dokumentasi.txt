@@ -6,18 +6,18 @@
 /add_kegiatan => menambah kegiatan 
 - /update_kegiatan => mengupdate suatu kegiatan
 /delete_kegiatan/:id_kegiatan
-- /delete_user/:usrnm => menghapus suatu user
+/delete_user/:usrnm => menghapus suatu user
 /get_all_kegiatan => mengambil semua list kegiatan
 /get_all_admin => mengambil semua user dengan role admin
-- /get_all_mitra_edcod => mengambil semua mitra edcod
-- /get_all_mitra_entri => mengambil semua mitra entri
-- /get_all_mitra => mengamibl semua mitra
+/get_all_mitra_edcod => mengambil semua mitra edcod
+/get_all_mitra_entri => mengambil semua mitra entri
+/get_all_mitra => mengamibl semua mitra
 /get_info/:id => mendapatkan info keseluruhan dari suatu kegiatan
 /fill_survei/:id_kegiatan => mengisi tabel kegiatan jika bertipe survei
 /fill_sensus/:id_kegiatan => mengisi tabel kegiatan jika bertipe sensus
 /get_progres_kecamatan_sensus/:id => mendapatkan progres per kecamatan jika kegiatan bertipe sensus
 /get_progres_kecamatan_survei/:id => mendapatkan progres per kecamatan jika kegiatan bertipe survei
-- /get_progres_petugas/:id_kegiatan => mendapatkan progres per petugas
+/get_progres_petugas/:id_kegiatan => mendapatkan progres per petugas
 /get_progres_sensus => mendapatkan progres RB,edcod, dan entri dari suatu kegiatan bertipe sensus
 /get_all_users => mendapatkan semua users
 - /check_id_kegiatan/:id_kegiatan => mengecek id_kegiatan unik
