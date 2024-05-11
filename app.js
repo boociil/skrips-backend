@@ -272,7 +272,7 @@ function authenticateTokenLevel2(req, res, next) {
 // mendapatkan informasi user dari token menggunakan fungsi ini
 function get_users_info(req, res, next) {
     const token = req.headers['token']
-    console.log("token : ", token);
+    
     if (token == null) return res.sendStatus(401); // Unauthorized
 
     jwt.verify(token, secretKey, (err, user) => {
@@ -674,13 +674,35 @@ app.post("/login", (req,res) => {
     }
 });
 
+// API untuk update Role
+app.post("/update_role_users", authenticateToken, (req,res) => {
 
-app.post("/update_users", (req,res) => {
+    const new_role = req.body.role;
+    const username = req.body.username;
+    try{
+        const query = "UPDATE `users` SET `role`='" + new_role +"' WHERE username = ?;"
+        db.query(query, [username], (err,results) => {
+            if (err){
+                res.status(400).send({msg:"Unknown Error"});
+            }
+            else{
+                res.status(200).send({msg: "Success"});
+            }
+        })
+    }catch(error){
+        res.status(500).send("Terjadi Kesalahan")
+    }
+})
+
+// API untuk update Password
+app.post("/update_password_users", async (req,res) => {
     
     try {
 
-        const { username, password, newPass, role } = req.body;
+        const { username, password, newPass } = req.body;
         
+        const newHashedPass = await bcrypt.hash(newPass, 10);
+
         // check apakah terdapat kesalahan username
         const query = 'SELECT username,firstName,lastName,gender,role,pass FROM `users` WHERE `username`= "' + username + '";';
         db.query(query, (err,results) =>{
@@ -700,38 +722,20 @@ app.post("/update_users", (req,res) => {
                         // Hasil pembandingan
                         if (resultss) {
                             // Update Password disini
-                            const newHashedPass = bcrypt.hash(newPass, 10);
-                            const query_update = `UPDATE 'users' SET 'pass'='${newHashedPass}' ${role !== null ? (`,'role'='${role}'`) : ('')} WHERE username = ? `
-                            db.query(query_update, [id], (err,results) => {
+                            
+                            console.log(newHashedPass);
+                            const query_update = "UPDATE `users` SET `pass`='" + newHashedPass + "' WHERE username = ?;"
+                            console.log(query_update);
+                            db.query(query_update, [username], (err,results) => {
                                 if (err){
-                                    res.status(500).send({msg:"internal server error"})
+                                    res.status(500).send({msg:err})
+                                }else{
+                                    res.status(200).send({msg:"Success"})
                                 }
                             })
-
-                            // Informasi yang terkandung dalam token
-                            const info = {
-                                "username": results[0].username,
-                                "firstName": results[0].firstName,
-                                "lastName": results[0].lastName,
-                                "gender": results[0].gender,
-                                "role": results[0].role,
-                            }
-                            // TOKEN
-                            // const token = jwt.sign(info,secretKey);
-                            
-                            // set_login(info.username);
-                            // res.status(200).json({
-                            //     msg:"Success",
-                            //     accessToken : token,
-                            //     role : results[0].role,
-                            //     username : info.username,
-                            //     fullName : info.firstName + " " + info.lastName
-                            // })
-                           
-                            
                         } else {
                             // Jika Kesalahan berada pada password
-                            res.status(400).send({msg:"Password", accessToken : "-"});
+                            res.status(400).send({msg:"Password Salah", accessToken : "-"});
                         }
                     }
                 });
@@ -1491,14 +1495,12 @@ app.post("/update_RB", (req,res) => {
     // console.log(req.body);
     let query = ''
     if (tgl_pengdok === null){
-        console.log('atas');
         query += "UPDATE `sensus` SET `status_pengdok` = NULL, `tgl_pengdok` = NULL, `penerima_dok` = NULL WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "';";
     }else{
-        console.log('bawah');
         query += "UPDATE `sensus` SET `status_pengdok` = '" + status_pengdok + "', `tgl_pengdok` = '" + tgl_pengdok + "', `penerima_dok` = '" + penerima_dok + "' WHERE `sensus`.`id_kegiatan` = '" + id_kegiatan + "' AND `sensus`.`id_dok` = '" + id_dok + "';";
     }
     // 
-    console.log(query);
+
 
     db.query(query, (err,results) => {
         if (err) throw err;
