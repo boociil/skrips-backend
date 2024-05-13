@@ -347,10 +347,10 @@ app.post('/progres_bar/:id_kegiatan', (req,res) => {
             YEAR(tgl_pengdok) AS tahun,
             MONTH(tgl_pengdok) AS bulan,
             CASE
-                WHEN DAYOFMONTH(tgl_pengdok) <= 7 THEN 'Minggu ke-1'
-                WHEN DAYOFMONTH(tgl_pengdok) <= 14 THEN 'Minggu ke-2'
-                WHEN DAYOFMONTH(tgl_pengdok) <= 21 THEN 'Minggu ke-3'
-                ELSE 'Minggu ke-4'
+                WHEN DAYOFMONTH(tgl_pengdok) <= 7 THEN '1'
+                WHEN DAYOFMONTH(tgl_pengdok) <= 14 THEN '2'
+                WHEN DAYOFMONTH(tgl_pengdok) <= 21 THEN '3'
+                ELSE '4'
             END AS minggu,
             COUNT(*) AS frekuensi
         FROM 
@@ -367,10 +367,10 @@ app.post('/progres_bar/:id_kegiatan', (req,res) => {
             YEAR(tgl_edcod) AS tahun,
             MONTH(tgl_edcod) AS bulan,
             CASE
-                WHEN DAYOFMONTH(tgl_edcod) <= 7 THEN 'Minggu ke-1'
-                WHEN DAYOFMONTH(tgl_edcod) <= 14 THEN 'Minggu ke-2'
-                WHEN DAYOFMONTH(tgl_edcod) <= 21 THEN 'Minggu ke-3'
-                ELSE 'Minggu ke-4'
+                WHEN DAYOFMONTH(tgl_edcod) <= 7 THEN '1'
+                WHEN DAYOFMONTH(tgl_edcod) <= 14 THEN '2'
+                WHEN DAYOFMONTH(tgl_edcod) <= 21 THEN '3'
+                ELSE '4'
             END AS minggu,
             COUNT(*) AS frekuensi
         FROM 
@@ -388,10 +388,10 @@ app.post('/progres_bar/:id_kegiatan', (req,res) => {
             YEAR(tgl_entri) AS tahun,
             MONTH(tgl_entri) AS bulan,
             CASE
-                WHEN DAYOFMONTH(tgl_entri) <= 7 THEN 'Minggu ke-1'
-                WHEN DAYOFMONTH(tgl_entri) <= 14 THEN 'Minggu ke-2'
-                WHEN DAYOFMONTH(tgl_entri) <= 21 THEN 'Minggu ke-3'
-                ELSE 'Minggu ke-4'
+                WHEN DAYOFMONTH(tgl_entri) <= 7 THEN '1'
+                WHEN DAYOFMONTH(tgl_entri) <= 14 THEN '2'
+                WHEN DAYOFMONTH(tgl_entri) <= 21 THEN '3'
+                ELSE '4'
             END AS minggu,
             COUNT(*) AS frekuensi
         FROM 
@@ -857,16 +857,24 @@ app.post("/delete_user/:usrnm", authenticateToken, (req,res) =>{
         const usrnm = req.params.usrnm;
         query = "DELETE FROM `users` WHERE username = '" + usrnm + "';";
         db.query(query , (err,results) =>{
-            if(err) throw err;
-            const a = results;
-            res.status(200).send({
-                msg : "Success"
-            });     
-        })
+            if(err){
+                res.status(500).send({msg : "Internal Server Error"})
+            }else{
+                const second_query = "DELETE FROM `users_activity` WHERE 'username = ?;"
+                db.query(second_query , (err2, results2) => {
+                    if(err2){
+                        res.status(500).send({msg : "Internal Server Error"});
+                    }else{
+                        res.status(200).send({
+                            msg : "Success"
+                        });   
+                    }
+                });
+            }
+        });
     } catch (error) {
         res.sendStatus(500);
     }
-    
 });
 
 app.post("/delete_kegiatan/:id_kegiatan", authenticateToken, (req,res) => {
