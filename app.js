@@ -161,6 +161,29 @@ function set_login(username) {
     }
 }
 
+function validate_obj(obj){
+
+    if (obj["Desa"] === "-" || obj["Desa"] === null){
+        return false;
+    }
+    if (obj["Kecamatan"] === "-" || obj["Kecamatan"] === null){
+        return false;
+    }
+    if (obj["Pengawas"] === "-" || obj["Pengawas"] === null){
+        return false;
+    }
+    if (obj["Pencacah"] === "-" || obj["Pencacah"] === null){
+        return false;
+    }
+    if (obj["NBS"] === "-" || obj["NBS"] === null){
+        return false;
+    }
+    if (obj["NKS"] === "-" || obj["Pencacah"] === null){
+        return false;
+    }
+    return true;
+}
+
 function set_logout(username) {
     try {
         // Destroy Session
@@ -208,7 +231,7 @@ function get_kode_daerah(callback) {
 
 // Fungsi untuk mendapatkan seluruh kecamatan untuk kegiatan Survei
 function get_kec_survei(id_kegiatan, callback) {
-    const query = 'SELECT dokumen.kode_sls AS "kode_sls", kecamatan.nama as "nama_kec", dokumen.id_x AS "id_x", dokumen.kode_desa AS "kode_desa", dokumen.kode_kec AS "kode_kec",survei.status_pengdok, survei.status_edcod, survei.status_entri FROM `survei` INNER JOIN dokumen ON survei.id_dok = dokumen.id_dok AND survei.id_kegiatan = dokumen.id_kegiatan INNER JOIN kecamatan ON kecamatan.kode = dokumen.kode_kec WHERE survei.id_kegiatan = ?;';
+    const query = 'SELECT dokumen.kode_sls AS "kode_sls", kecamatan.nama as "nama_kec", dokumen.x AS "id_x", dokumen.kode_desa AS "kode_desa", dokumen.kode_kec AS "kode_kec",survei.status_pengdok, survei.status_edcod, survei.status_entri FROM `survei` INNER JOIN dokumen ON survei.id_dok = dokumen.id_dok AND survei.id_kegiatan = dokumen.id_kegiatan INNER JOIN kecamatan ON kecamatan.kode = dokumen.kode_kec WHERE survei.id_kegiatan = ?;';
     // console.log(query);
     // Jalankan query dengan parameterized query untuk menghindari SQL Injection
     db.query(query, [id_kegiatan], (err, results) => {
@@ -222,7 +245,7 @@ function get_kec_survei(id_kegiatan, callback) {
 
 // Fungsi untuk mendapatkan seluruh kecamatan untuk kegiatan Sensus
 function get_kec_sensus(id_kegiatan, callback) {
-    const query = 'SELECT dokumen.kode_sls AS "kode_sls", dokumen.id_x AS "id_x", dokumen.kode_desa AS "kode_desa", dokumen.kode_kec AS "kode_kec", kecamatan.nama AS "nama_kec" , sensus.status_pengdok, sensus.status_edcod, sensus.status_entri FROM `sensus` INNER JOIN dokumen ON sensus.id_dok = dokumen.id_dok AND sensus.id_kegiatan = dokumen.id_kegiatan INNER JOIN kecamatan ON dokumen.kode_kec = kecamatan.kode WHERE sensus.id_kegiatan = ? ORDER BY dokumen.kode_kec ASC;';
+    const query = 'SELECT dokumen.kode_sls AS "kode_sls", dokumen.x AS "id_x", dokumen.kode_desa AS "kode_desa", dokumen.kode_kec AS "kode_kec", kecamatan.nama AS "nama_kec" , sensus.status_pengdok, sensus.status_edcod, sensus.status_entri FROM `sensus` INNER JOIN dokumen ON sensus.id_dok = dokumen.id_dok AND sensus.id_kegiatan = dokumen.id_kegiatan INNER JOIN kecamatan ON dokumen.kode_kec = kecamatan.kode WHERE sensus.id_kegiatan = ? ORDER BY dokumen.kode_kec ASC;';
     // console.log(query);
     // Jalankan query dengan parameterized query untuk menghindari SQL Injection
     db.query(query, [id_kegiatan], (err, results) => {
@@ -440,18 +463,25 @@ app.post('/upload', upload.single('file'), (req, res) => {
     // console.log('Data from Excel:', jsonData[0]);
     // console.log("id_kegiatan", id);
 
-    let query_dokumen = "INSERT INTO `dokumen`(`id_kegiatan`, `id_dok`, `kode_sls`, `id_x`, `kode_desa`, `kode_kec`, `ppl`, `pml`, `koseka`, `jenis`) VALUES "
+    let query_dokumen = "INSERT INTO `dokumen`(`id_kegiatan`, `id_dok`, `kode_sls`, `x`, `kode_desa`, `kode_kec`, `ppl`, `pml`, `koseka`, `jenis`) VALUES "
     let query_survei = "INSERT INTO `survei`(`id_kegiatan`, `id_dok`, `no_blok_sensus`, `no_kerangka_sampel`, `no_ruta`, `KRT`) VALUES "
 
-    const values_dokumen = "('[value-1]','[value-2]','[value-3]','[value-4]','[value-5]','[value-6]','[value-7]','[value-8]','[value-9]','[value-10]')"
-    const values_survei = "('[value-1]','[value-2]','[value-3]','[value-4]','[value-5]','[value-6]')"
-    // Loop through each object in the array
-
     let id_dok = 1
+
+    // console.log(jsonData);
+
+    let isWrongFormat = false;
+    for (let i = 0; i<jsonData.length; i++){
+        const obj = jsonData[i];
+        if(!validate_obj(obj)){
+            isWrongFormat = true;
+        }
+    }
+
     for (let i = 0; i < jsonData.length; i++) {
         const obj = jsonData[i];
-
-        query_dokumen += "('" + id + "','" + id_dok + "','" + obj["SLS"] + "','" + "-" + "','" + obj["Desa"] + "','" + obj["Kecamatan"] + "','" + obj["Pencacah"] + "','" + obj["Pengawas"] + "','" + "-" + "', '" + "2" + "'),"
+        
+        query_dokumen += "('" + id + "','" + id_dok + "','" + obj["SLS"] + "','" + obj["Korong"] +"','" + obj["Desa"] + "','" + obj["Kecamatan"] + "','" + obj["Pencacah"] + "','" + obj["Pengawas"] + "','" + "-" + "', '" + "2" + "'),"
 
         // Loop through each key-value pair in the object
         for (const key in obj) {
@@ -469,7 +499,7 @@ app.post('/upload', upload.single('file'), (req, res) => {
             }
         }
 
-        id_dok +=1 ;
+        id_dok += 1;
     }
 
     query_dokumen = query_dokumen.slice(0,-1)
@@ -477,30 +507,39 @@ app.post('/upload', upload.single('file'), (req, res) => {
     query_survei = query_survei.slice(0,-1)
     query_survei += ";"
 
-    db.query(query_dokumen, (err,resulsts) => {
-        if (err){
-            res.status(400).send({
-                msg : "Unknown Error",
-                data : err
-            })
-        }
-    })
-
-    db.query(query_survei, (err,resulsts) => {
-        if (err){
-            res.status(400).send({
-                msg : "Unknown Error",
-                data : err
+    
+    if (isWrongFormat){
+        res.status(400).json({ 
+            msg : "Failed"
+        });
+    }else{
+        db.query(query_dokumen, (err,resulsts) => {
+            if (err){
+                console.log("error di query dokumen");
+                res.status(400).send({
+                    msg : "Unknown Error",
+                    data : err
+                })
+            }
         })
-        }
-    })
 
-    // Tanggapi dengan hasil pemrosesan
-    change_stats(id,2)
-    res.status(200).json({ 
-        msg : "Success",
-        data: jsonData
-     });
+        db.query(query_survei, (err,resulsts) => {
+            if (err){
+                console.log("error di query survei");
+                res.status(400).send({
+                    msg : "Unknown Error",
+                    data : err
+            })
+            }
+        })
+
+        // Tanggapi dengan hasil pemrosesan
+        change_stats(id,2)
+
+        res.status(200).json({ 
+            msg : "Success",
+        });
+    }
 });
 
 // API untuk mendapatkan activity dari user
@@ -1031,7 +1070,7 @@ app.post("/fill_survei/:id_kegiatan", authenticateToken,(req,res) => {
                     }
                     const kode_daerah = results
                     // generate query
-                    the_query = "INSERT INTO `dokumen`(`id_kegiatan`, `id_dok`, `kode_sls`, `id_x`, `kode_desa`, `kode_kec`, `ppl`, `pml`, `koseka`, `jenis`) VALUES "
+                    the_query = "INSERT INTO `dokumen`(`id_kegiatan`, `id_dok`, `kode_sls`, `x`, `kode_desa`, `kode_kec`, `ppl`, `pml`, `koseka`, `jenis`) VALUES "
                     the_query_2 = "INSERT INTO `survei`(`id_kegiatan`, `id_dok`, `no_blok_sensus`, `no_kerangka_sampel`, `no_ruta`, `KRT`) VALUES "
                     
                     // id_dok start from 1
@@ -1415,7 +1454,7 @@ app.post("/get_pengolahan_data/:id_kegiatan", (req,res) => {
 // API untuk mendapatkan kode wilayah, dan status pengolahan sensus, parameter : id_kegiatan (id kegiatan survei)
 app.post("/get_pengolahan_data_survei/:id_kegiatan", (req,res) => {
     id_kegiatan = req.params.id_kegiatan
-    query = "SELECT dokumen.id_dok, dokumen.kode_kec, kecamatan.nama AS 'Kec', dokumen.kode_desa, desa.nama AS 'Desa' , dokumen.id_x AS 'id_x' , x.nama AS 'nama_x', survei.no_blok_sensus, survei.KRT, survei.no_kerangka_sampel , survei.no_ruta AS 'no_ruta', dokumen.ppl, dokumen.pml, dokumen.koseka, survei.tgl_pengdok, survei.penerima_dok, survei.status_pengdok, survei.status_edcod, survei.petugas_edcod, survei.tgl_edcod, survei.status_entri, survei.petugas_entri, survei.moda_entri, survei.tgl_entri FROM dokumen INNER JOIN kecamatan on kecamatan.kode = dokumen.kode_kec INNER JOIN desa on desa.kode = dokumen.kode_desa AND dokumen.kode_kec = desa.kode_kec INNER JOIN x on x.id = dokumen.id_x AND x.kode_desa = dokumen.kode_desa AND x.kode_kec = dokumen.kode_kec INNER JOIN survei on dokumen.id_kegiatan = survei.id_kegiatan AND dokumen.id_dok = survei.id_dok WHERE dokumen.id_kegiatan = '" + id_kegiatan + "' AND survei.id_kegiatan = '" + id_kegiatan + "';"
+    query = "SELECT dokumen.id_dok, dokumen.kode_kec, kecamatan.nama AS 'Kec', dokumen.kode_desa, desa.nama AS 'Desa' , dokumen.x AS 'nama_x', survei.no_blok_sensus, survei.KRT, survei.no_kerangka_sampel , survei.no_ruta AS 'no_ruta', dokumen.ppl, dokumen.pml, dokumen.koseka, survei.tgl_pengdok, survei.penerima_dok, survei.status_pengdok, survei.status_edcod, survei.petugas_edcod, survei.tgl_edcod, survei.status_entri, survei.petugas_entri, survei.moda_entri, survei.tgl_entri FROM dokumen INNER JOIN kecamatan on kecamatan.kode = dokumen.kode_kec INNER JOIN desa on desa.kode = dokumen.kode_desa AND dokumen.kode_kec = desa.kode_kec INNER JOIN survei on dokumen.id_kegiatan = survei.id_kegiatan AND dokumen.id_dok = survei.id_dok WHERE dokumen.id_kegiatan = '" + id_kegiatan + "' AND survei.id_kegiatan = '" + id_kegiatan + "';"
     db.query(query, (err,results) => {
         if (err) throw err;
         res.status(200).send(results);
@@ -1424,7 +1463,7 @@ app.post("/get_pengolahan_data_survei/:id_kegiatan", (req,res) => {
 
 // API untuk mendapatkan seluruh Korong (Digunakan untuk memilih sampel dari seluruh SLS yang ada)
 app.post("/get_sls",(req,res) => {
-    query = "SELECT x.id AS 'id', x.nama AS 'Korong', desa.kode AS 'kode_desa', desa.nama AS 'Desa', kecamatan.kode AS 'kode_kec', kecamatan.nama AS 'Kec' FROM `x` INNER JOIN desa ON x.kode_desa = desa.kode AND x.kode_kec = desa.kode_kec INNER JOIN kecamatan on x.kode_kec = kecamatan.kode ORDER BY kode_kec, kode_desa;"
+    query = "SELECT x.nama AS 'Korong', desa.kode AS 'kode_desa', desa.nama AS 'Desa', kecamatan.kode AS 'kode_kec', kecamatan.nama AS 'Kec' FROM `x` INNER JOIN desa ON x.kode_desa = desa.kode AND x.kode_kec = desa.kode_kec INNER JOIN kecamatan on x.kode_kec = kecamatan.kode ORDER BY kode_kec, kode_desa;"
     db.query(query, (err,results) => {
         if (err) throw err;
         res.status(200).send(results);

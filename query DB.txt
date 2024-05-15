@@ -182,3 +182,11 @@ GROUP BY
 
 
 /////////////////////////////////
+
+
+SELECT sls.kode AS 'kode_sls', sls.nama_x AS 'SLS', desa.kode AS 
+'kode_desa', desa.nama AS 'Desa', kecamatan.kode AS 'kode_kec', 
+kecamatan.nama AS 'Kec' FROM `sls` 
+
+INNER JOIN desa ON sls.kode_desa = desa.kode AND sls.kode_kec = desa.kode_kec 
+INNER JOIN kecamatan on sls.kode_kec = kecamatan.kode ORDER BY kecamatan.kode, desa.kode, sls.kode ASC ;
