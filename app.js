@@ -876,14 +876,21 @@ app.post("/add_kegiatan", authenticateToken, async (req,res) => {
 });
 
 
-app.post("/update_kegiatan", (req,res) => {
+app.post("/update_kegiatan", authenticateToken, (req,res) => {
 
     try {
-        const { id, nama, jenis, metode, initiator_id, status,tanggal_mulai, target_selesai, koseka, target_pengdok, target_edcod, target_entri } = req.body;
-        query = "UPDATE `kegiatan` SET `jenis` = '" + jenis + "', `metode` = '" + metode + "', `initiator_id` = '" + initiator_id + "', `status` = '" + status + "',`tanggal_mulai` = '" + tanggal_mulai +"', `target_selesai` = '" + target_selesai + "', `koseka` = '" + koseka + "', `target_pengdok` = '" + target_pengdok + "', `target_edcod` = '" + target_edcod + "', `target_entri` = '" + target_entri +"' WHERE `kegiatan`.`id` = '" + id + "' ";
+        const { id, tanggal_mulai, target_selesai, target_pengdok, target_edcod, target_entri } = req.body;
+        query = "UPDATE `kegiatan` SET `tanggal_mulai` = '" + tanggal_mulai +"', `target_selesai` = '" + target_selesai + "', `target_pengdok` = '" + target_pengdok + "', `target_edcod` = '" + target_edcod + "', `target_entri` = '" + target_entri +"' WHERE `kegiatan`.`id` = '" + id + "';";
         db.query(query, (err,results) => {
-            if (err) throw err;
-            res.status(200).send(results);
+            if (err){
+                res.status(400).send({
+                    msg: "Unknown Error"
+                });
+            }else{
+                res.status(200).send({
+                    msg: "Success"
+                });
+            }
         })
     } catch (error) {
         
