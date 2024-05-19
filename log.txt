@@ -877,3 +877,8 @@ Program berjalan di http://localhost:3001, time : 18/5/2024 10:51:5.
 Program berjalan di http://localhost:3001, time : 18/5/2024 10:53:42.
 Program berjalan di http://localhost:3001, time : 18/5/2024 10:54:50.
 Program berjalan di http://localhost:3001, time : 18/5/2024 11:0:33.
+Program berjalan di http://localhost:3001, time : 19/5/2024 18:36:2.
+IP : ::1 requesting POST on /login.
+IP : ::1 requesting POST on /login.
+Program berjalan di http://localhost:3001, time : 19/5/2024 19:41:28.
+IP : ::1 requesting POST on /login.
