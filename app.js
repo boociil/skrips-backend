@@ -589,6 +589,8 @@ app.post("/register", authenticateToken, async (req,res) =>{
         const { username, password, firstName, lastName, gender, role, status } = req.body;
         const hashedPass = await bcrypt.hash(password, 10);
 
+        const usrname = req.user.username
+
         //Push ke db
         const query = "INSERT INTO `users` (`username`, `firstName`, `lastName`, `pass`, `gender` , `role`, `status`, `created_at`) VALUES ('" + username + "', '" + firstName + "', '" + lastName + "', '" + hashedPass +"', '" + gender +"' ,'" + role + "', '" + status + "', current_timestamp());"
         check_username(username)
@@ -604,6 +606,9 @@ app.post("/register", authenticateToken, async (req,res) =>{
                         res.status(403).send(err);
                     }
                     
+                    // SetActivity
+                    users_log_activiy(usrname,"ADD_USER",username)
+
                     res.status(201).send({
                         "msg" : "Berhasil"
                     });
@@ -718,6 +723,7 @@ app.post("/update_role_users", authenticateToken, (req,res) => {
 
     const new_role = req.body.role;
     const username = req.body.username;
+    const usrnm = req.user.username;
     try{
         const query = "UPDATE `users` SET `role`='" + new_role +"' WHERE username = ?;"
         db.query(query, [username], (err,results) => {
@@ -725,6 +731,8 @@ app.post("/update_role_users", authenticateToken, (req,res) => {
                 res.status(400).send({msg:"Unknown Error"});
             }
             else{
+                // Set Activity
+                users_log_activiy(usrnm, "ROLE_MANAGEMENT",`${username} -> ${new_role}`)
                 res.status(200).send({msg: "Success"});
             }
         })
@@ -769,6 +777,7 @@ app.post("/update_password_users", async (req,res) => {
                                 if (err){
                                     res.status(500).send({msg:err})
                                 }else{
+                                    users_log_activiy(username, "CHANGE_PASSWORD");
                                     res.status(200).send({msg:"Success"})
                                 }
                             })
@@ -837,7 +846,12 @@ app.post("/add_kegiatan", authenticateToken, async (req,res) => {
     // Autentikasi User dulu, apakah bisa menambahkan kegiatan baru atau tidak
 
     try{
+        const info = req.user
+        const username = info.username
+
+        
         const { id, nama, jenis, tgl_mulai, target_selesai, koseka, target_pengdok, target_edcod, target_entri } = req.body;
+        
 
         let status = '1'
         if (jenis === '1'){
@@ -856,6 +870,9 @@ app.post("/add_kegiatan", authenticateToken, async (req,res) => {
                 db.query(query, (err,results) => {
                     if (err) throw err;
                 });
+
+                // SetActivity
+                users_log_activiy(username,"ADD_KEGIATAN",id)
 
                 res.status(201).send({
                     msg: "Berhasil",
@@ -926,6 +943,7 @@ app.post("/delete_user/:usrnm", authenticateToken, (req,res) =>{
 app.post("/delete_kegiatan/:id_kegiatan", authenticateToken, (req,res) => {
 
     const id = req.params.id_kegiatan
+    const username = req.user.username
 
     query = "DELETE FROM `kegiatan` WHERE id = '" + id + "';";
     info(id , (err,results) => {
@@ -959,6 +977,9 @@ app.post("/delete_kegiatan/:id_kegiatan", authenticateToken, (req,res) => {
         db.query(query, (err,ress) => {
             if (err) throw err;
         })
+
+        // SetActivity
+        users_log_activiy(username,"DELETE_KEGIATAN",id)
 
         res.status(200).send("Hapus kegiatan " + id + " Berhasil"); 
     })
@@ -1020,7 +1041,7 @@ app.post("/get_all_mitra", (req,res) => {
 })
 
 // menginput mitra baru
-app.post("/register_mitra", (req,res) => {
+app.post("/register_mitra", get_users_info, (req,res) => {
     try {
         query = "INSERT INTO `mitra` (`id`, `nama`, `status`, `start_contract`, `end_contract`) VALUES (NULL, ?, ?, ?, ?);"
         const data = req.body;
@@ -1028,10 +1049,11 @@ app.post("/register_mitra", (req,res) => {
         const status = data.tugas
         const start_contract = data.start
         const end_contract = data.end
-        
+        const username = req.user.username
 
         db.query(query, [nama,status,start_contract,end_contract] , (err,results) => {
             if (err) throw err;
+            users_log_activiy(username, "ADD_MITRA",nama)
             res.status(200).send({
                 msg: "Berhasil",
             })   
