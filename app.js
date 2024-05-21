@@ -225,7 +225,7 @@ function get_kode_daerah(callback) {
             callback(null, results);
         })
     } catch (error) {
-        console.log(error);
+        throw error;
     }
 }
 
@@ -262,7 +262,6 @@ function get_kec_sensus(id_kegiatan, callback) {
 // Autentikasi User (Admin) di cek menggunakan fungsi ini
 function authenticateToken(req, res, next) {
     const token = req.headers['token']
-    // console.log(token);
     if (token == null) return res.sendStatus(401); // Unauthorized
 
     jwt.verify(token, secretKey, (err, user) => {
@@ -284,7 +283,7 @@ function authenticateTokenLevel2(req, res, next) {
     jwt.verify(token, secretKey, (err, user) => {
         if (err) return res.sendStatus(403); // Forbidden
         req.user = user;
-        if (user.role == 'admin' || user.role == 'pengawas'){
+        if (user.role == 'Admin' || user.role == 'Pengawas'){
             next();
         }else{
             res.sendStatus(403); // Forbidden
@@ -918,6 +917,7 @@ app.post("/delete_user/:usrnm", authenticateToken, (req,res) =>{
 
     try {
         const usrnm = req.params.usrnm;
+        const username = req.user.username
         query = "DELETE FROM `users` WHERE username = '" + usrnm + "';";
         db.query(query , (err,results) =>{
             if(err){
@@ -928,6 +928,8 @@ app.post("/delete_user/:usrnm", authenticateToken, (req,res) =>{
                     if(err2){
                         res.status(500).send({msg : "Internal Server Error"});
                     }else{
+                        // Log Activity Users
+                        users_log_activiy(username, "DELETE_USERS",usrnm)
                         res.status(200).send({
                             msg : "Success"
                         });   
@@ -1053,6 +1055,7 @@ app.post("/register_mitra", get_users_info, (req,res) => {
 
         db.query(query, [nama,status,start_contract,end_contract] , (err,results) => {
             if (err) throw err;
+            // Log Activity Users
             users_log_activiy(username, "ADD_MITRA",nama)
             res.status(200).send({
                 msg: "Berhasil",
@@ -1509,9 +1512,9 @@ app.post("/get_sls2",(req,res) => {
 })
 
 // API untuk mengubah isian tabel survei kolom RB
-app.post("/update_RB_survei", (req,res) => {
+app.post("/update_RB_survei", authenticateTokenLevel2, (req,res) => {
     const {id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_pengdok, penerima_dok, status_pengdok } = req.body;
-    // console.log(id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_pengdok, penerima_dok, status_pengdok);
+    const username = req.user.username
     let query = ''
     if (tgl_pengdok !== null){
         query = "UPDATE `survei` SET `status_pengdok` = '" + status_pengdok +"', `tgl_pengdok` = '" + tgl_pengdok +"', `penerima_dok` = '" + penerima_dok +"' WHERE `survei`.`id_kegiatan` = '" + id_kegiatan +"' AND `survei`.`no_blok_sensus` = '" + no_blok_sensus +"' AND `survei`.`no_kerangka_sampel` = '" + no_kerangka_sampel +"' AND `survei`.`no_ruta` = '" + no_ruta +"';"
@@ -1521,6 +1524,8 @@ app.post("/update_RB_survei", (req,res) => {
     // console.log(query);
     db.query(query, (err,results) => {
         if (err) throw err;
+        // LOG ACTIVITY
+        users_log_activiy(username,"UPDATE_RB",`id:${id_kegiatan} nbs:${no_blok_sensus} nks:${no_kerangka_sampel} ruta:${no_ruta} status:${status_pengdok}`)
         res.status(200).send({
             msg : "Update Berhasil"
         });
@@ -1528,8 +1533,9 @@ app.post("/update_RB_survei", (req,res) => {
 })
 
 // API untuk mengubah isian tabel survei kolom Edcod
-app.post("/update_Edcod_survei", (req,res) => {
+app.post("/update_Edcod_survei", authenticateTokenLevel2, (req,res) => {
     const {id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_edcod, petugas_edcod, status_edcod } = req.body;
+    const username = req.user.username
     // console.log(id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_edcod, petugas_edcod, status_edcod);
     let query = ''
     if (tgl_edcod !== null){
@@ -1540,6 +1546,8 @@ app.post("/update_Edcod_survei", (req,res) => {
     // console.log(query);
     db.query(query, (err,results) => {
         if (err) throw err;
+        // LOG ACTIVITY
+        users_log_activiy(username,"UPDATE_EDCOD",`id:${id_kegiatan} nbs:${no_blok_sensus} nks:${no_kerangka_sampel} ruta:${no_ruta} status:${status_edcod}`);
         res.status(200).send({
             msg : "Update Berhasil"
         });
@@ -1547,7 +1555,8 @@ app.post("/update_Edcod_survei", (req,res) => {
 })
 
 // API untuk mengubah isian tabel survei kolom Entri
-app.post("/update_Entri_survei", (req,res) => {
+app.post("/update_Entri_survei", authenticateTokenLevel2, (req,res) => {
+    const username = req.user.username
     const {id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_entri, petugas_entri, status_entri } = req.body;
     // console.log(id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_entri, petugas_entri, status_entri);
     let query = ''
@@ -1559,6 +1568,8 @@ app.post("/update_Entri_survei", (req,res) => {
     // console.log(query);
     db.query(query, (err,results) => {
         if (err) throw err;
+        // LOG ACTIVITY
+        users_log_activiy(username,"UPDATE_ENTRI",`id:${id_kegiatan} nbs:${no_blok_sensus} nks:${no_kerangka_sampel} ruta:${no_ruta} status:${status_entri}`)
         res.status(200).send({
             msg : "Update Berhasil"
         });
@@ -1566,7 +1577,8 @@ app.post("/update_Entri_survei", (req,res) => {
 })
 
 // API untuk mengubah isian tabel sensus kolom RB
-app.post("/update_RB", (req,res) => {
+app.post("/update_RB",authenticateTokenLevel2, (req,res) => {
+    const username = req.user.username;
     const { id_kegiatan, id_dok, status_pengdok , tgl_pengdok, penerima_dok } = req.body;
     // console.log(req.body);
     let query = ''
@@ -1580,6 +1592,8 @@ app.post("/update_RB", (req,res) => {
 
     db.query(query, (err,results) => {
         if (err) throw err;
+        // LOG ACTIVITY
+        users_log_activiy(username,"UPDATE_RB",`id:${id_kegiatan} status:${status_pengdok}`)
         res.status(200).send({
             msg: "Update Berhasil"
         });
@@ -1588,7 +1602,9 @@ app.post("/update_RB", (req,res) => {
 })
 
 // API untuk mengubah isian tabel sensus kolom Edcod
-app.post("/update_Edcod", (req,res) => {
+app.post("/update_Edcod", authenticateTokenLevel2, (req,res) => {
+
+    const username = req.user.username;
     const { id_kegiatan, id_dok, status_edcod , tgl_edcod, petugas_edcod } = req.body;
     // console.log(req.body);
 
@@ -1604,6 +1620,8 @@ app.post("/update_Edcod", (req,res) => {
 
     db.query(query, (err,results) => {
         if (err) throw err;
+        // LOG ACTIVITY
+        users_log_activiy(username,"UPDATE_EDCOD",`id:${id_kegiatan} status:${status_edcod}`)
         res.status(200).send({
             msg: "Update Berhasil"
         });
@@ -1612,7 +1630,8 @@ app.post("/update_Edcod", (req,res) => {
 })
 
 // API untuk mengubah isian tabel sensus kolom Entri
-app.post("/update_Entri", (req,res) => {
+app.post("/update_Entri", authenticateTokenLevel2, (req,res) => {
+    const username = req.user.username;
     const { id_kegiatan, id_dok, status_entri , tgl_entri, petugas_entri, moda } = req.body;
     // console.log(req.body);
     let query = ''
@@ -1627,6 +1646,8 @@ app.post("/update_Entri", (req,res) => {
 
     db.query(query, (err,results) => {
         if (err) throw err;
+        // LOG ACTIVITY
+        users_log_activiy(username,"UPDATE_ENTRI",`id:${id_kegiatan} status:${status_entri}`)
         res.status(200).send({
             msg: "Update Berhasil"
         });
