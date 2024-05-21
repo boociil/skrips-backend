@@ -989,7 +989,7 @@ app.post("/delete_kegiatan/:id_kegiatan", authenticateToken, (req,res) => {
 
 // mengambil semua list kegiatan
 app.post("/get_all_kegiatan", (req,res) => {
-    query = "SELECT nama,id,tanggal_mulai,status,metode,initiator_id FROM `kegiatan`;";
+    query = "SELECT nama,id,tanggal_mulai,jenis,status,metode,initiator_id FROM `kegiatan`;";
     db.query(query, (err,results) => {
         if (err) throw err;
         res.status(200).send(results);
@@ -1144,6 +1144,121 @@ app.post("/fill_survei/:id_kegiatan", authenticateToken,(req,res) => {
             }
         });
 
+    } catch (error) {
+        
+    }
+})
+
+// API untuk mendapatkan progres per kecamatan
+app.post("/get_progres_kecamatan/:id", (req,res) => {
+    try {
+        const id = req.params.id
+        info(id, (err,results) => {
+            if (err) {
+                res.sendStatus(500);
+            }
+
+            const data = results
+            const jenis = data[0].jenis
+            // Survei
+            if (jenis === "2"){
+                const id_kegiatan = id
+                get_kec_survei(id_kegiatan, (err, results) => {
+                    if (err) {
+                        console.log("Terjadi kesalahan");
+                        res.sendStatus(500);
+                        return;
+                    }
+                    
+                    const data = results;
+                    // console.log(results);
+                    let data_progres = {}; // inisialisasi objek kosong
+            
+                    // Iterasi melalui data dan mengisi objek data_progres
+                    data.forEach(item => {
+                        if (!data_progres[item.kode_kec]) {
+                            data_progres[item.kode_kec] = {
+                                nama_kec : "",
+                                rb: 0,
+                                edcod: 0,
+                                entri: 0,
+                                total: 0,
+                                progres_rb : 0,
+                                progres_edcod : 0,
+                                progres_entri : 0,
+                            };
+                        }
+            
+                        data_progres[item.kode_kec]["nama_kec"] = item["nama_kec"]
+            
+                        if (item.status_pengdok === 1) {
+                            data_progres[item.kode_kec]["rb"] += 1;
+                        }
+                        if (item.status_edcod === 1) {
+                            data_progres[item.kode_kec]["edcod"] += 1;
+                        }
+                        if (item.status_entri === 1) {
+                            data_progres[item.kode_kec]["entri"] += 1;
+                        }
+                        data_progres[item.kode_kec]["total"] += 1;
+                        data_progres[item.kode_kec]["progres_rb"] = (data_progres[item.kode_kec]["rb"]/data_progres[item.kode_kec]["total"]) * 100;
+                        data_progres[item.kode_kec]["progres_edcod"] = (data_progres[item.kode_kec]["edcod"]/data_progres[item.kode_kec]["total"]) * 100;
+                        data_progres[item.kode_kec]["progres_entri"] = (data_progres[item.kode_kec]["entri"]/data_progres[item.kode_kec]["total"]) * 100;
+                
+                    });
+            
+                    // console.log(data_progres);
+                    res.status(200).send(data_progres);
+                });
+            }
+            // Sensus
+            else{
+                const id_kegiatan = id
+                get_kec_sensus(id_kegiatan, (err,results) => {
+                    if (err) {
+                        res.sendStatus(500);
+                        return;
+                    }
+                    const data = results;
+                    let data_progres = {}; // inisialisasi objek kosong
+            
+                    // Iterasi melalui data dan mengisi objek data_progres
+                    data.forEach(item => {
+                        if (!data_progres[item.kode_kec]) {
+                            data_progres[item.kode_kec] = {
+                                nama_kec : "",
+                                rb: 0,
+                                edcod: 0,
+                                entri: 0,
+                                total: 0,
+                                progres_rb : 0,
+                                progres_edcod : 0,
+                                progres_entri : 0,
+                            };
+                        }
+            
+                        data_progres[item.kode_kec]["nama_kec"] = item["nama_kec"]
+            
+                        if (item.status_pengdok === 1) {
+                            data_progres[item.kode_kec]["rb"] += 1;
+                        }
+                        if (item.status_edcod === 1) {
+                            data_progres[item.kode_kec]["edcod"] += 1;
+                        }
+                        if (item.status_entri === 1) {
+                            data_progres[item.kode_kec]["entri"] += 1;
+                        }
+                        data_progres[item.kode_kec]["total"] += 1;
+                        data_progres[item.kode_kec]["progres_rb"] = (data_progres[item.kode_kec]["rb"]/data_progres[item.kode_kec]["total"]) * 100;
+                        data_progres[item.kode_kec]["progres_edcod"] = (data_progres[item.kode_kec]["edcod"]/data_progres[item.kode_kec]["total"]) * 100;
+                        data_progres[item.kode_kec]["progres_entri"] = (data_progres[item.kode_kec]["entri"]/data_progres[item.kode_kec]["total"]) * 100;
+                
+                    });
+            
+                    res.status(200).send(data_progres);
+                });
+            }
+        })
     } catch (error) {
         
     }
@@ -1338,6 +1453,43 @@ app.post("/get_progres_entri_sensus/:id_kegiatan", (req,res) => {
     }
 })
 
+// API untuk mendapatkan progres keseluruhan RB, Edcod dan Entri
+app.post("/get_overall_progres/:id_kegiatan", (req,res) => {
+    try {
+        const id = req.params.id_kegiatan;
+        info(id, (err,results) => {
+            if (err) {
+                res.sendStatus(500);
+            }
+
+            const data = results
+            const jenis = data[0].jenis
+
+            if (jenis === "2"){
+                const query = "SELECT (SELECT COUNT(*) FROM survei WHERE id_kegiatan = ? AND status_pengdok = '1') AS rb,(SELECT COUNT(*) FROM survei WHERE id_kegiatan = ? AND status_edcod = '1') AS edcod,(SELECT COUNT(*) FROM survei WHERE id_kegiatan = ? AND status_entri = '1') AS entri,(SELECT COUNT(*) FROM survei WHERE id_kegiatan = ?) AS total,(SELECT MIN(tgl_pengdok) AS mulai_pengdok FROM survei WHERE id_kegiatan = ?) AS start_pengdok, (SELECT MIN(tgl_edcod) AS mulai_pengdok FROM survei WHERE id_kegiatan = ?) AS start_edcod, (SELECT MIN(tgl_entri) AS mulai_pengdok FROM survei WHERE id_kegiatan = ?) AS start_entri;"
+                db.query(query, [id,id,id,id,id,id,id], (err,results) => {
+                    if(err){
+                        throw err;
+                    }
+                    res.status(200).send(results);
+                })
+            }else{
+                const query = "SELECT (SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"' AND status_pengdok = '1') AS rb,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"' AND status_edcod = '1') AS edcod,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"' AND status_entri = '1') AS entri,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"') AS total,(SELECT MIN(tgl_pengdok) AS mulai_pengdok FROM sensus WHERE id_kegiatan = '" + id +"') AS start_pengdok,(SELECT MIN(tgl_edcod) AS tgl_pengdok FROM sensus WHERE id_kegiatan = '" + id +"') AS start_edcod,(SELECT MIN(tgl_entri) AS tgl_entri FROM sensus WHERE id_kegiatan = '" + id +"') AS start_entri;"
+                db.query(query, [id,id,id,id], (err,results) => {
+                    if(err){
+                        throw err;
+                    }
+                    // delay(10000).then(function idk() {
+                    //     res.status(200).send(results);
+                    // })
+                    res.status(200).send(results);
+                    });
+            }
+        })
+    } catch (error) {
+        throw error;
+    }
+});
 
 
 // API untuk mendapatkan progres keseluruhan RB, Edcod, dan Entri
