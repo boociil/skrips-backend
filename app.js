@@ -88,6 +88,49 @@ async function info(id, callback) {
     })
 }
 
+// fungsi untuk mengecek progres dari suatu kegiatan
+function check_is_finish(id, callback) {
+    info(id, (err,results) => {
+        if (err) {
+            res.sendStatus(500);
+        }
+
+        const data = results;
+        const jenis = data[0].jenis
+
+        if (jenis === "2"){
+            const query = "SELECT * FROM `survei` WHERE id_kegiatan = ? AND ((status_pengdok IS NULL OR 0) OR (status_edcod is NULL OR 0) OR (status_entri is NULL OR 0));";
+            db.query(query, [id], (err, results) => {
+                if (err) {
+                    callback(err, null);
+                } else {
+                    const l = results.length;
+                    if (l === 0) {
+                        callback(null, true);
+                    } else {
+                        callback(null, false);
+                    }
+                }
+            });
+        }else{
+            const query = "SELECT * FROM `sensus` WHERE id_kegiatan = ? AND ((status_pengdok IS NULL OR 0) OR (status_edcod is NULL OR 0) OR (status_entri is NULL OR 0));";
+            db.query(query, [id], (err, results) => {
+                if (err) {
+                    callback(err, null);
+                } else {
+                    const l = results.length;
+                    if (l === 0) {
+                        callback(null, true);
+                    } else {
+                        callback(null, false);
+                    }
+                }
+            });
+        }
+    })
+    
+}
+
 // fungsi untuk mengubah status kegiatan 
 function change_stats(id,status) {
     try {
@@ -1135,7 +1178,7 @@ app.post("/fill_survei/:id_kegiatan", authenticateToken,(req,res) => {
                     db.query(the_query_2, (err, results) =>{
                         if (err) throw err;
                     })
-                    change_stats(id_kegiatan,"2")
+                    change_stats(id_kegiatan,"2");
                     res.status(200).send("Berhasil");
                 });
             }else{
@@ -1479,9 +1522,6 @@ app.post("/get_overall_progres/:id_kegiatan", (req,res) => {
                     if(err){
                         throw err;
                     }
-                    // delay(10000).then(function idk() {
-                    //     res.status(200).send(results);
-                    // })
                     res.status(200).send(results);
                     });
             }
@@ -1496,14 +1536,11 @@ app.post("/get_overall_progres/:id_kegiatan", (req,res) => {
 app.post("/get_progres_sensus/:id_kegiatan", (req,res) => {
     id = req.params.id_kegiatan
     try {
-        const query = "SELECT (SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"' AND status_pengdok = '1') AS rb,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"' AND status_edcod = '1') AS edcod,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"' AND status_entri = '1') AS entri,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"') AS total,(SELECT MIN(tgl_pengdok) AS mulai_pengdok FROM sensus WHERE id_kegiatan = '" + id +"') AS start_pengdok,(SELECT MIN(tgl_edcod) AS tgl_pengdok FROM sensus WHERE id_kegiatan = '" + id +"') AS start_edcod,(SELECT MIN(tgl_entri) AS tgl_entri FROM sensus WHERE id_kegiatan = '" + id +"') AS start_entri;"
+        const query = "SELECT (SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"' AND status_pengdok = '1') AS rb,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"' AND status_edcod = '1') AS edcod,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"' AND status_entri = '1') AS entri,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"') AS total,(SELECT MIN(tgl_pengdok) AS mulai_pengdok FROM sensus WHERE id_kegiatan = '" + id +"') AS start_pengdok,(SELECT MIN(tgl_edcod) AS tgl_pengdok FROM sensus WHERE id_kegiatan = '" + id +"') AS start_edcod,(SELECT MIN(tgl_entri) AS tgl_entri FROM sensus WHERE id_kegiatan = '" + id +"') AS start_entri;";
         db.query(query, [id,id,id,id], (err,results) => {
             if(err){
                 throw err;
             }
-            // delay(10000).then(function idk() {
-            //     res.status(200).send(results);
-            // })
             res.status(200).send(results);
         })
     } catch (error) {
@@ -1515,7 +1552,7 @@ app.post("/get_progres_sensus/:id_kegiatan", (req,res) => {
 app.post("/get_progres_survei/:id_kegiatan", (req,res) => {
     id = req.params.id_kegiatan
     try {
-        const query = "SELECT (SELECT COUNT(*) FROM survei WHERE id_kegiatan = ? AND status_pengdok = '1') AS rb,(SELECT COUNT(*) FROM survei WHERE id_kegiatan = ? AND status_edcod = '1') AS edcod,(SELECT COUNT(*) FROM survei WHERE id_kegiatan = ? AND status_entri = '1') AS entri,(SELECT COUNT(*) FROM survei WHERE id_kegiatan = ?) AS total,(SELECT MIN(tgl_pengdok) AS mulai_pengdok FROM survei WHERE id_kegiatan = ?) AS start_pengdok, (SELECT MIN(tgl_edcod) AS mulai_pengdok FROM survei WHERE id_kegiatan = ?) AS start_edcod, (SELECT MIN(tgl_entri) AS mulai_pengdok FROM survei WHERE id_kegiatan = ?) AS start_entri;"
+        const query = "SELECT (SELECT COUNT(*) FROM survei WHERE id_kegiatan = ? AND status_pengdok = '1') AS rb,(SELECT COUNT(*) FROM survei WHERE id_kegiatan = ? AND status_edcod = '1') AS edcod,(SELECT COUNT(*) FROM survei WHERE id_kegiatan = ? AND status_entri = '1') AS entri,(SELECT COUNT(*) FROM survei WHERE id_kegiatan = ?) AS total,(SELECT MIN(tgl_pengdok) AS mulai_pengdok FROM survei WHERE id_kegiatan = ?) AS start_pengdok, (SELECT MIN(tgl_edcod) AS mulai_pengdok FROM survei WHERE id_kegiatan = ?) AS start_edcod, (SELECT MIN(tgl_entri) AS mulai_pengdok FROM survei WHERE id_kegiatan = ?) AS start_entri;";
         db.query(query, [id,id,id,id,id,id,id], (err,results) => {
             if(err){
                 throw err;
@@ -1722,6 +1759,15 @@ app.post("/update_Entri_survei", authenticateTokenLevel2, (req,res) => {
         if (err) throw err;
         // LOG ACTIVITY
         users_log_activiy(username,"UPDATE_ENTRI",`id:${id_kegiatan} nbs:${no_blok_sensus} nks:${no_kerangka_sampel} ruta:${no_ruta} status:${status_entri}`)
+        check_is_finish(id_kegiatan, (err,isFinish) => {
+            if (err) {
+                console.error(err);
+            } else {
+                if(isFinish){
+                    change_stats(id_kegiatan,"4");
+                }
+            }
+        }); 
         res.status(200).send({
             msg : "Update Berhasil"
         });
@@ -1800,6 +1846,15 @@ app.post("/update_Entri", authenticateTokenLevel2, (req,res) => {
         if (err) throw err;
         // LOG ACTIVITY
         users_log_activiy(username,"UPDATE_ENTRI",`id:${id_kegiatan} status:${status_entri}`)
+        check_is_finish(id_kegiatan, (err,isFinish) => {
+            if (err) {
+                console.error(err);
+            } else {
+                if(isFinish){
+                    change_stats(id_kegiatan,"4");
+                }
+            }
+        }); 
         res.status(200).send({
             msg: "Update Berhasil"
         });
@@ -1829,7 +1884,6 @@ app.post("/progres_petugas_survei/:id_kegiatan", (req,res) => {
 // API untuk test fungsi (DEVELOPMENT)
 app.post("/test", (req,res) => {
 
-    
 })
 
 
