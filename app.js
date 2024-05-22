@@ -478,6 +478,7 @@ app.post('/progres_bar/:id_kegiatan', (req,res) => {
 
 // API untuk menerima file upload dari frontend
 app.post('/upload', upload.single('file'), (req, res) => {
+    // const username = req.user.username
     const file = req.file;
     const id = req.body.id_kegiatan
     if (!file) {
@@ -577,7 +578,8 @@ app.post('/upload', upload.single('file'), (req, res) => {
 
         // Tanggapi dengan hasil pemrosesan
         change_stats(id,2)
-
+        // LOG ACTIVITY
+        // users_log_activiy(username,"UPLOAD_SAMPEL",id)
         res.status(200).json({ 
             msg : "Success",
         });
@@ -939,6 +941,7 @@ app.post("/update_kegiatan", authenticateToken, (req,res) => {
 
     try {
         const { id, tanggal_mulai, target_selesai, target_pengdok, target_edcod, target_entri } = req.body;
+        const username = req.user.username;
         query = "UPDATE `kegiatan` SET `tanggal_mulai` = '" + tanggal_mulai +"', `target_selesai` = '" + target_selesai + "', `target_pengdok` = '" + target_pengdok + "', `target_edcod` = '" + target_edcod + "', `target_entri` = '" + target_entri +"' WHERE `kegiatan`.`id` = '" + id + "';";
         db.query(query, (err,results) => {
             if (err){
@@ -946,6 +949,8 @@ app.post("/update_kegiatan", authenticateToken, (req,res) => {
                     msg: "Unknown Error"
                 });
             }else{
+                // LOG ACTIVITY
+                users_log_activiy(username,"UPDATE_KEGIATAN")
                 res.status(200).send({
                     msg: "Success"
                 });
