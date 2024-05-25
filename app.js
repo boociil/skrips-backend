@@ -355,7 +355,7 @@ function get_users_info(req, res, next) {
 ////////////////////////////////////////////////////////////////////
 
 app.get("/", (req,res) => {
-    res.send("Hello world");
+    res.send("Yaa kenapa?");
 });
 
 
@@ -635,8 +635,13 @@ app.post("/register", authenticateToken, async (req,res) =>{
 
         const usrname = req.user.username
 
+        let isRB = null
+        if(role === 'Admin'){
+            isRB = 1;
+        }
+
         //Push ke db
-        const query = "INSERT INTO `users` (`username`, `firstName`, `lastName`, `pass`, `gender` , `role`, `status`, `created_at`) VALUES ('" + username + "', '" + firstName + "', '" + lastName + "', '" + hashedPass +"', '" + gender +"' ,'" + role + "', '" + status + "', current_timestamp());"
+        const query = "INSERT INTO `users` (`username`, `firstName`, `lastName`, `pass`, `gender` , `role`, `isRB` , `status`, `created_at`) VALUES ('" + username + "', '" + firstName + "', '" + lastName + "', '" + hashedPass +"', '" + gender +"' ,'" + role + "', '" + isRB + "','" + status + "', current_timestamp());"
         check_username(username)
         .then(l => {
             if(l != 0){
@@ -899,7 +904,7 @@ app.post("/add_kegiatan", authenticateToken, async (req,res) => {
 
         let status = '1'
         if (jenis === '1'){
-            status = '2'
+            status = '3'
         }
 
         nothing_in_db(id, (err,hasil) => {
@@ -1046,7 +1051,7 @@ app.post("/get_all_kegiatan", (req,res) => {
 
 // mendapatkan semua anggota ipds
 app.post("/get_all_admin", (req,res) => {
-    query = "SELECT username,lastName,firstName FROM `users` WHERE role = 'admin';";
+    query = "SELECT username,lastName,firstName FROM `users` WHERE isRB = '1';";
     db.query(query, (err,results) => {
         if (err) throw err;
         res.status(200).send(results);
@@ -1600,7 +1605,7 @@ app.post("/fill_sensus/:id_kegiatan", authenticateToken ,(req,res) => {
                         console.log("Terjadi kesalahan:", err);
                         return;
                     }
-                    const kode_daerah = results
+                    const kode_daerah = results;
                     // generate query
                     the_query = "INSERT INTO `dokumen`(`id_kegiatan`, `id_dok`, `kode_sls`, `kode_desa`, `kode_kec`, `ppl`, `pml`, `koseka`, `jenis`) VALUES "
                     the_query_2 = "INSERT INTO `sensus`(`id_kegiatan`, `id_dok`) VALUES "

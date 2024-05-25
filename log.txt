@@ -963,3 +963,24 @@ Program berjalan di http://localhost:3001, time : 22/5/2024 16:37:29.
 IP : ::1 requesting POST on /login.
 Program berjalan di http://localhost:3001, time : 22/5/2024 16:38:10.
 Program berjalan di http://localhost:3001, time : 22/5/2024 16:38:31.
+Program berjalan di http://localhost:3001, time : 23/5/2024 18:49:48.
+IP : ::1 requesting POST on /login.
+IP : ::1 requesting POST on /login.
+Program berjalan di http://localhost:3001, time : 24/5/2024 10:2:43.
+IP : ::1 requesting POST on /login.
+IP : ::1 requesting POST on /login.
+Program berjalan di http://localhost:3001, time : 25/5/2024 12:15:1.
+Program berjalan di http://localhost:3001, time : 25/5/2024 12:15:33.
+IP : ::ffff:127.0.0.1 requesting POST on /login.
+IP : ::ffff:127.0.0.1 requesting POST on /login.
+IP : ::1 requesting POST on /login.
+IP : ::1 requesting POST on /login.
+Program berjalan di http://localhost:3001, time : 25/5/2024 12:54:20.
+Program berjalan di http://localhost:3001, time : 25/5/2024 13:14:4.
+IP : ::1 requesting POST on /login.
+IP : ::1 requesting POST on /login.
+Program berjalan di http://localhost:3001, time : 25/5/2024 14:7:25.
+Program berjalan di http://localhost:3001, time : 25/5/2024 14:8:49.
+Program berjalan di http://localhost:3001, time : 25/5/2024 14:17:17.
+Program berjalan di http://localhost:3001, time : 25/5/2024 14:17:53.
+Program berjalan di http://localhost:3001, time : 25/5/2024 14:20:27.
