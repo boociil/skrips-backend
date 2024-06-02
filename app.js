@@ -15,7 +15,7 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const port = 3001;
+const port = process.env.PORT || 3000
 const secretKey = 'secretKey';
 
 
@@ -48,7 +48,7 @@ app.use(express.json());
 //   });
 
 app.use(cors());
-
+app.use('/static', express.static(path.join(__dirname, 'public')));
 
 ////////////////////////////////////////////////////////////////////
 //FUNCTION
@@ -577,7 +577,7 @@ app.post('/upload', upload.single('file'), (req, res) => {
         })
 
         // Tanggapi dengan hasil pemrosesan
-        change_stats(id,2)
+        change_stats(id,3)
         // LOG ACTIVITY
         // users_log_activiy(username,"UPLOAD_SAMPEL",id)
         res.status(200).json({ 
@@ -709,16 +709,16 @@ app.post("/assign_petugas/:id_kegiatan", async (req, res) => {
 
 // API Login
 app.post("/login", (req,res) => {
-    
-    write_log(`IP : ${req.ip} requesting POST on /login`);
 
     try {
 
         const { username, password } = req.body;
         
-        query = 'SELECT username,firstName,lastName,gender,role,pass FROM `users` WHERE `username`= "' + username + '";';
+        const query = "SELECT username,firstName,lastName,gender,role,pass FROM `users` WHERE `username`= '" + username + "';";
+        console.log(query);
         db.query(query, (err,results) =>{
-            if (!results.length){
+            console.log(!results);
+            if (results.length === 0){
                 // Jika Kesalahan berada pada username
                 res.status(400).send({
                     msg : "Username",
@@ -1188,7 +1188,7 @@ app.post("/fill_survei/:id_kegiatan", authenticateToken,(req,res) => {
                     db.query(the_query_2, (err, results) =>{
                         if (err) throw err;
                     })
-                    change_stats(id_kegiatan,"2");
+                    change_stats(id_kegiatan,"3");
                     res.status(200).send("Berhasil");
                 });
             }else{
@@ -1900,4 +1900,6 @@ app.post("/test", (req,res) => {
 //END OF POST//////////////////////////////////////////////////
 write_log(`Program berjalan di http://localhost:${port}, time : ${currentTime}`);
 console.clear()
-app.listen(port, () => console.log(`Program berjalan di http://localhost:${port}, time : ${currentTime}`));
+app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+  });
