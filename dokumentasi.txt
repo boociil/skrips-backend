@@ -1,8 +1,14 @@
+/progres_bar/:id_kegiatan
+/upload
+/get_user_activity
 /check_username/:usrnm => mengecek apakah username sudah ada di database atau belum
 /register => register user baru
 /assign_petugas/:id_kegiatan => assign petugas lapangan
 /login => login
+/update_role_users
+/update_password_users
 /logout => logout
+/get_users_info
 /add_kegiatan => menambah kegiatan 
 - /update_kegiatan => mengupdate suatu kegiatan
 /delete_kegiatan/:id_kegiatan
@@ -12,13 +18,21 @@
 /get_all_mitra_edcod => mengambil semua mitra edcod
 /get_all_mitra_entri => mengambil semua mitra entri
 /get_all_mitra => mengamibl semua mitra
+/register_mitra
 /get_info/:id => mendapatkan info keseluruhan dari suatu kegiatan
 /fill_survei/:id_kegiatan => mengisi tabel kegiatan jika bertipe survei
 /fill_sensus/:id_kegiatan => mengisi tabel kegiatan jika bertipe sensus
 /get_progres_kecamatan_sensus/:id => mendapatkan progres per kecamatan jika kegiatan bertipe sensus
 /get_progres_kecamatan_survei/:id => mendapatkan progres per kecamatan jika kegiatan bertipe survei
+/get_progres_pengdok_sensus
+/get_progres_pengdok_survei
+/get_progres_edcod_sensus
+/get_progres_edcod_survei
+/get_progres_entri_sensus
+/get_progres_entri_survei
 /get_progres_petugas/:id_kegiatan => mendapatkan progres per petugas
 /get_progres_sensus => mendapatkan progres RB,edcod, dan entri dari suatu kegiatan bertipe sensus
+/get_overall_progres/:id_kegiatan
 /get_all_users => mendapatkan semua users
 - /check_id_kegiatan/:id_kegiatan => mengecek id_kegiatan unik
 /get_pengolahan_data/:id_kegiatan => mendapatkan kode wilayah, dan status pengolahan sensus, parameter : id_kegiatan (id kegiatan sensus)

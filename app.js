@@ -15,7 +15,10 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const port = process.env.PORT || 3000
+// PRODUCTION
+// const port = process.env.PORT || 3000
+// DEVELOPMENT
+const port = 3001
 const secretKey = 'secretKey';
 
 
@@ -85,6 +88,59 @@ async function info(id, callback) {
             return;
         }
         callback(null, results);
+    })
+}
+
+// fungsi untuk mengupdate progres di backend
+function update_progres(id, msg){
+
+    const q = {
+        "2" : `SELECT (SELECT COUNT(*) FROM survei WHERE id_kegiatan = '${id}' AND status_pengdok = '1') AS rb,
+        (SELECT COUNT(*) FROM survei WHERE id_kegiatan = '${id}' AND status_edcod = '1') AS edcod,
+        (SELECT COUNT(*) FROM survei WHERE id_kegiatan = '${id}' AND status_entri = '1') AS entri,
+        (SELECT COUNT(*) FROM survei WHERE id_kegiatan = '${id}') AS total;`,
+        "1" : `SELECT (SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '${id}' AND status_pengdok = '1') AS rb,
+        (SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '${id}' AND status_edcod = '1') AS edcod,
+        (SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '${id}' AND status_entri = '1') AS entri,
+        (SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '${id}') AS total;`
+    }
+
+    info(id, (err,results) => {
+        if (err) {
+            return;
+        }else{
+            const data = results;
+            const jenis = data[0].jenis
+            db.query(q[jenis], (err,ress) => {
+                if (err) {
+                    return;
+                }
+                if (ress.length === 0) {
+                    // berarti tidak ada data
+                    // do nothing
+                }else{
+                    // jika ada data, maka hitung progresnya
+                    const sum = ress[0].rb + ress[0].edcod + ress[0].entri;
+                    const total = ress[0].total * 3;
+                    const persentase = ((sum / total) * 100).toFixed(2);
+                    console.log("id: ", id, sum, total, persentase);
+                    if (total === 0) {
+                        // query ke db untuk update progres kegiatan
+                        const q2 = "UPDATE `kegiatan` SET `progres` = '0.00' WHERE `kegiatan`.`id` = '" + id +"'"
+                        db.query(q2, (err,ress) => {
+                            if (err) throw err;
+                            console.log(ress);
+                        })
+                    } else {
+                        const q2 = "UPDATE `kegiatan` SET `progres` = '" + persentase + "' WHERE `kegiatan`.`id` = '" + id +"'"
+                        db.query(q2, (err,ress) => {
+                            if (err) throw err;
+                            console.log(ress);
+                        })
+                    }
+                }
+            })
+        }
     })
 }
 
@@ -194,9 +250,6 @@ function set_login(username) {
         db.query(query, (err,results) => {
             if (err) throw err;
 
-            // BUAT SESSION DISINI
-
-            // Masukan kedalam Log
         });
         users_log_activiy(username, "LOG_IN")
     } catch (error) {
@@ -387,7 +440,7 @@ app.get('/files/:filename', (req, res) => {
 ////////////////////////////////////////////////////////////////////
 
 // API untuk mendapatkan tgl progres
-app.post('/progres_bar/:id_kegiatan', (req,res) => {
+app.post('/progres_bar/:id_kegiatan', async (req,res) => {
     const jenis = req.params.jenis;
     const id = req.params.id_kegiatan;
 
@@ -477,7 +530,7 @@ app.post('/progres_bar/:id_kegiatan', (req,res) => {
 })
 
 // API untuk menerima file upload dari frontend
-app.post('/upload', upload.single('file'), (req, res) => {
+app.post('/upload', upload.single('file'), async (req, res) => {
     // const username = req.user.username
     const file = req.file;
     const id = req.body.id_kegiatan
@@ -587,7 +640,7 @@ app.post('/upload', upload.single('file'), (req, res) => {
 });
 
 // API untuk mendapatkan activity dari user
-app.post("/get_user_activity/:username", (req,res) => {
+app.post("/get_user_activity/:username", async (req,res) => {
     const usr = req.params.username;
     check_username(usr)
     .then(l => {
@@ -613,7 +666,7 @@ app.post("/get_user_activity/:username", (req,res) => {
 
 
 // API Check Username sudah ada atau belum di database
-app.post("/check_username/:usrnm", (req,res) =>{
+app.post("/check_username/:usrnm", async (req,res) =>{
     const usrnm = req.params.usrnm;
     check_username(usrnm).then(l => {
         if(l == 0){
@@ -708,16 +761,15 @@ app.post("/assign_petugas/:id_kegiatan", async (req, res) => {
 
 
 // API Login
-app.post("/login", (req,res) => {
+app.post("/login", async (req,res) => {
 
     try {
 
         const { username, password } = req.body;
         
-        const query = "SELECT username,firstName,lastName,gender,role,pass FROM `users` WHERE `username`= '" + username + "';";
+        const query = "SELECT username,firstName,lastName,gender,role,pass FROM `users` WHERE `username`= ?;";
         console.log(query);
-        db.query(query, (err,results) =>{
-            console.log(!results);
+        db.query(query, [username] ,(err,results) =>{
             if (results.length === 0){
                 // Jika Kesalahan berada pada username
                 res.status(400).send({
@@ -729,7 +781,7 @@ app.post("/login", (req,res) => {
                 bcrypt.compare(password, hashed_pass, function(err,resultss){
                     if (err) {
                         // Kesalahan selama pembandingan
-                        console.error('Error during password comparison:', err);
+                        res.status(500).send("Terjadi Kesalahan")
                     } else {
                         // Hasil pembandingan
                         if (resultss) {
@@ -768,7 +820,7 @@ app.post("/login", (req,res) => {
 });
 
 // API untuk update Role
-app.post("/update_role_users", authenticateToken, (req,res) => {
+app.post("/update_role_users", authenticateToken, async (req,res) => {
 
     const new_role = req.body.role;
     const username = req.body.username;
@@ -844,7 +896,7 @@ app.post("/update_password_users", async (req,res) => {
 });
 
 // API Log Out
-app.post("/logout", get_users_info ,(req,res) => {
+app.post("/logout", get_users_info ,async (req,res) => {
     try {
         const info = req.user;
         const username = info.username;
@@ -860,7 +912,7 @@ app.post("/logout", get_users_info ,(req,res) => {
 });
 
 // API untuk mendapatkan informasi dari suatu user
-app.post("/get_users_info/:username", authenticateToken ,(req,res) => {
+app.post("/get_users_info/:username", authenticateToken ,async (req,res) => {
     try {
         const username = req.params.username;
         check_username(username)
@@ -942,7 +994,7 @@ app.post("/add_kegiatan", authenticateToken, async (req,res) => {
 });
 
 
-app.post("/update_kegiatan", authenticateToken, (req,res) => {
+app.post("/update_kegiatan", authenticateToken, async (req,res) => {
 
     try {
         const { id, tanggal_mulai, target_selesai, target_pengdok, target_edcod, target_entri } = req.body;
@@ -966,7 +1018,7 @@ app.post("/update_kegiatan", authenticateToken, (req,res) => {
     }
 });
 
-app.post("/delete_user/:usrnm", authenticateToken, (req,res) =>{
+app.post("/delete_user/:usrnm", authenticateToken, async (req,res) =>{
 
     try {
         const usrnm = req.params.usrnm;
@@ -1041,16 +1093,16 @@ app.post("/delete_kegiatan/:id_kegiatan", authenticateToken, (req,res) => {
 });
 
 // mengambil semua list kegiatan
-app.post("/get_all_kegiatan", (req,res) => {
-    query = "SELECT nama,id,tanggal_mulai,jenis,status,metode,initiator_id FROM `kegiatan`;";
+app.post("/get_all_kegiatan", async (req,res) => {
+    query = "SELECT nama,id,tanggal_mulai,jenis,status,metode,initiator_id,progres FROM `kegiatan`;";
     db.query(query, (err,results) => {
         if (err) throw err;
-        res.status(200).send(results);
+            res.status(200).send(results);
     })
 })
 
 // mendapatkan semua anggota ipds
-app.post("/get_all_admin", (req,res) => {
+app.post("/get_all_admin", async (req,res) => {
     query = "SELECT username,lastName,firstName FROM `users` WHERE isRB = '1';";
     db.query(query, (err,results) => {
         if (err) throw err;
@@ -1059,17 +1111,17 @@ app.post("/get_all_admin", (req,res) => {
 })
 
 // mendapatkan semua mitra edcod
-app.post("/get_all_mitra_edcod", (req,res) => {
-    query = "SELECT * FROM `mitra` WHERE status = 'Edcod';";
+app.post("/get_all_mitra_edcod", async (req,res) => {
+    query = "SELECT * FROM `mitra` WHERE status = 'Edcod' AND DATE(start_contract) > DATE_SUB(CURDATE(), INTERVAL 1 DAY) AND CURDATE() < DATE(end_contract);";
     db.query(query, (err,results) => {
         if (err) throw err;
         res.status(200).send(results);
     })
 })
 
-// mendapatkan semua mitra edcod
-app.post("/get_all_mitra_entri", (req,res) => {
-    query = "SELECT * FROM `mitra` WHERE status = 'Entri';";
+// mendapatkan semua mitra entri
+app.post("/get_all_mitra_entri", async (req,res) => {
+    query = "SELECT * FROM `mitra` WHERE status = 'Entri' AND DATE(start_contract) > DATE_SUB(CURDATE(), INTERVAL 1 DAY) AND CURDATE() < DATE(end_contract);";
     db.query(query, (err,results) => {
         if (err) throw err;
         res.status(200).send(results);
@@ -1077,8 +1129,8 @@ app.post("/get_all_mitra_entri", (req,res) => {
 })
 
 // mendapatkan semua mitra
-app.post("/get_all_mitra", (req,res) => {
-    query = "SELECT nama,status,start_contract, end_contract FROM `mitra` ORDER BY status;";
+app.post("/get_all_mitra", async (req,res) => {
+    query = "SELECT id,nama, status, DATE_FORMAT(start_contract, '%Y-%m-%d') AS start_contract, DATE_FORMAT(end_contract, '%Y-%m-%d') AS end_contract FROM mitra ORDER BY status;";
     db.query(query, (err,results) => {
         if (err) throw err;
         const data_json = JSON.stringify(results)
@@ -1089,14 +1141,14 @@ app.post("/get_all_mitra", (req,res) => {
             item.end_contract = item.end_contract.slice(0,10);
 
             return item;
-          });
-          
+        });
+
         res.status(200).send(newData);
     })
 })
 
 // menginput mitra baru
-app.post("/register_mitra", get_users_info, (req,res) => {
+app.post("/register_mitra", authenticateToken, async (req,res) => {
     try {
         query = "INSERT INTO `mitra` (`id`, `nama`, `status`, `start_contract`, `end_contract`) VALUES (NULL, ?, ?, ?, ?);"
         const data = req.body;
@@ -1121,8 +1173,35 @@ app.post("/register_mitra", get_users_info, (req,res) => {
     }
 })
 
+// Edit Mitra
+app.post("/edit_mitra", authenticateToken, async (req,res) => {
+    try {
+        q = "UPDATE `mitra` SET `nama` = ?, `status` = ?, `start_contract` = ?, `end_contract` = ? WHERE `mitra`.`id` = ? "
+        const data = req.body;
+        const nama = data.nama;
+        const status = data.tugas
+        const start_contract = data.start
+        const end_contract = data.end
+        const id = data.id
+        const username = req.user.username
+
+        db.query(q, [nama,status,start_contract,end_contract,id] , (err,results) => {
+            if (err) throw err;
+            // Log Activity Users
+            users_log_activiy(username, "EDIT_MITRA",nama)
+            res.status(200).send({
+                msg: "Berhasil",
+            })   
+        })
+    } catch (error) {
+        res.status(500).send({
+            msg: "Internal Server Error",
+        })   
+    }
+})
+
 // mengambil info mengenai suatu kegiatan
-app.post("/get_info/:id", (req,res) => {
+app.post("/get_info/:id", async (req,res) => {
     
     const id = req.params.id;
     query = "SELECT * FROM `kegiatan` WHERE id = '" + id + "';";
@@ -1133,7 +1212,7 @@ app.post("/get_info/:id", (req,res) => {
 })
 
 // API untuk mengisi tabel dokumen dan surve, parameter : id_kegiatan (id kegiatan survei)
-app.post("/fill_survei/:id_kegiatan", authenticateToken,(req,res) => {
+app.post("/fill_survei/:id_kegiatan", authenticateToken, async (req,res) => {
     
     id_kegiatan = req.params.id_kegiatan;
     
@@ -1203,7 +1282,7 @@ app.post("/fill_survei/:id_kegiatan", authenticateToken,(req,res) => {
 })
 
 // API untuk mendapatkan progres per kecamatan
-app.post("/get_progres_kecamatan/:id", (req,res) => {
+app.post("/get_progres_kecamatan/:id", async (req,res) => {
     try {
         const id = req.params.id
         info(id, (err,results) => {
@@ -1318,7 +1397,7 @@ app.post("/get_progres_kecamatan/:id", (req,res) => {
 })
 
 // API untuk mendapatkan progres per kecamatan
-app.post("/get_progres_kecamatan_sensus/:id",(req,res) => {
+app.post("/get_progres_kecamatan_sensus/:id", async (req,res) => {
     id_kegiatan = req.params.id;
     get_kec_sensus(id_kegiatan, (err,results) => {
         if (err) {
@@ -1370,7 +1449,7 @@ app.post("/get_progres_kecamatan_sensus/:id",(req,res) => {
 });
 
 // API untuk mendapatkan progres per kecamatan (survei)
-app.post("/get_progres_kecamatan_survei/:id", (req, res) => {
+app.post("/get_progres_kecamatan_survei/:id", async (req, res) => {
     id_kegiatan = req.params.id
     get_kec_survei(id_kegiatan, (err, results) => {
         if (err) {
@@ -1422,7 +1501,7 @@ app.post("/get_progres_kecamatan_survei/:id", (req, res) => {
 });
 
 // API untuk mendapatkan progres petugas RB (sensus)
-app.post("/get_progres_pengdok_sensus/:id_kegiatan", (req,res) => {
+app.post("/get_progres_pengdok_sensus/:id_kegiatan", async (req,res) => {
     id = req.params.id_kegiatan;
     try {
         const query  ="SELECT users.firstName, users.lastName , COUNT(penerima_dok) as 'TOTAL' FROM sensus INNER JOIN users ON users.username = sensus.penerima_dok WHERE id_kegiatan = ? GROUP BY penerima_dok;"
@@ -1436,7 +1515,7 @@ app.post("/get_progres_pengdok_sensus/:id_kegiatan", (req,res) => {
 })
 
 // API untuk mendapatkan progres petugas RB (Survei)
-app.post("/get_progres_pengdok_survei/:id_kegiatan", (req,res) => {
+app.post("/get_progres_pengdok_survei/:id_kegiatan", async (req,res) => {
     id = req.params.id_kegiatan;
     try {
         const query  ="SELECT users.firstName, users.lastName , COUNT(penerima_dok) as 'TOTAL' FROM survei INNER JOIN users ON users.username = survei.penerima_dok WHERE id_kegiatan = ? GROUP BY penerima_dok;"
@@ -1450,7 +1529,7 @@ app.post("/get_progres_pengdok_survei/:id_kegiatan", (req,res) => {
 })
 
 // API untuk mendapatkan progres petugas Edcod (Survei)
-app.post("/get_progres_edcod_survei/:id_kegiatan", (req,res) => {
+app.post("/get_progres_edcod_survei/:id_kegiatan", async (req,res) => {
     id = req.params.id_kegiatan;
     try {
         const query  ="SELECT mitra.nama, COUNT(petugas_edcod) as 'TOTAL' FROM survei INNER JOIN mitra ON mitra.id = survei.petugas_edcod WHERE id_kegiatan = ? GROUP BY petugas_edcod;"
@@ -1464,7 +1543,7 @@ app.post("/get_progres_edcod_survei/:id_kegiatan", (req,res) => {
 })
 
 // API untuk mendapatkan progres petugas Edcod (sensus)
-app.post("/get_progres_edcod_sensus/:id_kegiatan", (req,res) => {
+app.post("/get_progres_edcod_sensus/:id_kegiatan", async (req,res) => {
     id = req.params.id_kegiatan;
     try {
         const query  ="SELECT mitra.nama, COUNT(petugas_edcod) as 'TOTAL' FROM sensus INNER JOIN mitra ON mitra.id = sensus.petugas_edcod WHERE id_kegiatan = ? GROUP BY petugas_edcod;"
@@ -1479,7 +1558,7 @@ app.post("/get_progres_edcod_sensus/:id_kegiatan", (req,res) => {
 
 
 // API untuk mendapatkan progres petugas Entri (Survei)
-app.post("/get_progres_entri_survei/:id_kegiatan", (req,res) => {
+app.post("/get_progres_entri_survei/:id_kegiatan", async (req,res) => {
     id = req.params.id_kegiatan;
     try {
         const query  ="SELECT mitra.nama, COUNT(petugas_entri) as 'TOTAL' FROM survei INNER JOIN mitra ON mitra.id = survei.petugas_entri WHERE id_kegiatan = ? GROUP BY petugas_entri;"
@@ -1493,7 +1572,7 @@ app.post("/get_progres_entri_survei/:id_kegiatan", (req,res) => {
 })
 
 // API untuk mendapatkan progres petugas Entri (sensus)
-app.post("/get_progres_entri_sensus/:id_kegiatan", (req,res) => {
+app.post("/get_progres_entri_sensus/:id_kegiatan", async (req,res) => {
     id = req.params.id_kegiatan;
     try {
         const query  ="SELECT mitra.nama, COUNT(petugas_entri) as 'TOTAL' FROM sensus INNER JOIN mitra ON mitra.id = sensus.petugas_entri WHERE id_kegiatan = ? GROUP BY petugas_entri;"
@@ -1507,7 +1586,7 @@ app.post("/get_progres_entri_sensus/:id_kegiatan", (req,res) => {
 })
 
 // API untuk mendapatkan progres keseluruhan RB, Edcod dan Entri
-app.post("/get_overall_progres/:id_kegiatan", (req,res) => {
+app.post("/get_overall_progres/:id_kegiatan", async (req,res) => {
     try {
         const id = req.params.id_kegiatan;
         info(id, (err,results) => {
@@ -1542,16 +1621,77 @@ app.post("/get_overall_progres/:id_kegiatan", (req,res) => {
 });
 
 
+// API untuk mendapatkan ONLY_PROGRES (%) keseluruhan menjadi satu
+app.post("/get_only_progres/:id_kegiatan", (req,res) => {
+    id = req.params.id_kegiatan
+    try {
+        info(id, (err,results) => {
+            if (err) {
+            
+                res.sendStatus(500);
+            }else{
+                const data = results;
+                const jenis = data[0].jenis
+                let q = ""
+                if (jenis === "2"){
+                    // Query Survei
+                    q = `SELECT (SELECT COUNT(*) FROM survei WHERE id_kegiatan = '${id}' AND status_pengdok = '1') AS rb,
+                    (SELECT COUNT(*) FROM survei WHERE id_kegiatan = '${id}' AND status_edcod = '1') AS edcod,
+                    (SELECT COUNT(*) FROM survei WHERE id_kegiatan = '${id}' AND status_entri = '1') AS entri,
+                    (SELECT COUNT(*) FROM survei WHERE id_kegiatan = '${id}') AS total;`
+                }else{
+                    // Query Sensus
+                    q = `SELECT (SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '${id}' AND status_pengdok = '1') AS rb,
+                    (SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '${id}' AND status_edcod = '1') AS edcod,
+                    (SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '${id}' AND status_entri = '1') AS entri,
+                    (SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '${id}') AS total;`
+                }
+                console.log(q);
+                db.query(q, (err,ress) => {
+                    if (err) {
+                        console.error("Query Error: ", err);
+                        return res.sendStatus(500).send({ 'msg': 'Database query error' });
+                    }
+                    if (ress.length === 0) {
+                        return res.status(404).send({ 'msg': 'No data found' });
+                    }
+        
+                    const sum = ress[0].rb + ress[0].edcod + ress[0].entri;
+                    const total = ress[0].total * 3;
+                    const persentase = ((sum / total) * 100).toFixed(2);
+        
+                    console.log("id: ", id, sum, total, persentase);
+                    if (sum === 0) {
+                        res.status(200).send({
+                            'msg': "Success",
+                            'persentase': "-"
+                        });
+                    } else {
+                        res.status(200).send({
+                            'msg': "Success",
+                            'persentase': persentase
+                        });
+                    }
+                })
+            }
+        })
+    }
+    catch (error){
+
+    }
+})
+
 // API untuk mendapatkan progres keseluruhan RB, Edcod, dan Entri
-app.post("/get_progres_sensus/:id_kegiatan", (req,res) => {
+app.post("/get_progres_sensus/:id_kegiatan", async (req,res) => {
     id = req.params.id_kegiatan
     try {
         const query = "SELECT (SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"' AND status_pengdok = '1') AS rb,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"' AND status_edcod = '1') AS edcod,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"' AND status_entri = '1') AS entri,(SELECT COUNT(*) FROM sensus WHERE id_kegiatan = '" + id +"') AS total,(SELECT MIN(tgl_pengdok) AS mulai_pengdok FROM sensus WHERE id_kegiatan = '" + id +"') AS start_pengdok,(SELECT MIN(tgl_edcod) AS tgl_pengdok FROM sensus WHERE id_kegiatan = '" + id +"') AS start_edcod,(SELECT MIN(tgl_entri) AS tgl_entri FROM sensus WHERE id_kegiatan = '" + id +"') AS start_entri;";
         db.query(query, [id,id,id,id], (err,results) => {
             if(err){
-                throw err;
+                res.status(200).send(err);
+            }else{
+                res.status(200).send(results);
             }
-            res.status(200).send(results);
         })
     } catch (error) {
         console.log(error);
@@ -1559,7 +1699,7 @@ app.post("/get_progres_sensus/:id_kegiatan", (req,res) => {
 })
 
 // API untuk mendapatkan progres keseluruhan RB, Edcod, dan Entri
-app.post("/get_progres_survei/:id_kegiatan", (req,res) => {
+app.post("/get_progres_survei/:id_kegiatan", async (req,res) => {
     id = req.params.id_kegiatan
     try {
         const query = "SELECT (SELECT COUNT(*) FROM survei WHERE id_kegiatan = ? AND status_pengdok = '1') AS rb,(SELECT COUNT(*) FROM survei WHERE id_kegiatan = ? AND status_edcod = '1') AS edcod,(SELECT COUNT(*) FROM survei WHERE id_kegiatan = ? AND status_entri = '1') AS entri,(SELECT COUNT(*) FROM survei WHERE id_kegiatan = ?) AS total,(SELECT MIN(tgl_pengdok) AS mulai_pengdok FROM survei WHERE id_kegiatan = ?) AS start_pengdok, (SELECT MIN(tgl_edcod) AS mulai_pengdok FROM survei WHERE id_kegiatan = ?) AS start_edcod, (SELECT MIN(tgl_entri) AS mulai_pengdok FROM survei WHERE id_kegiatan = ?) AS start_entri;";
@@ -1575,7 +1715,7 @@ app.post("/get_progres_survei/:id_kegiatan", (req,res) => {
 })
 
 // API untuk mendapatkan semua users (digunakan untuk assign petugas)
-app.post("/get_all_users", authenticateToken, (req,res) => {
+app.post("/get_all_users", authenticateToken, async (req,res) => {
     try {
         const query = "SELECT `username`, `firstName`, `lastName`, `role`, `status` FROM `users` ORDER BY `role`,`status` DESC;"
         db.query(query, (err,results) => {
@@ -1589,7 +1729,7 @@ app.post("/get_all_users", authenticateToken, (req,res) => {
 })
 
 // API untuk mengisi tabel dokumen dan sensus, parameter : id_kegiatan (id kegiatan sensus)
-app.post("/fill_sensus/:id_kegiatan", authenticateToken ,(req,res) => {
+app.post("/fill_sensus/:id_kegiatan", authenticateToken , async (req,res) => {
     
     id_kegiatan = req.params.id_kegiatan;
     try {
@@ -1648,7 +1788,7 @@ app.post("/fill_sensus/:id_kegiatan", authenticateToken ,(req,res) => {
 })
 
 // API untuk mengecek id_kegiatan unik
-app.post("/check_id_kegiatan/:id_kegiatan", authenticateToken, (req,res) => {
+app.post("/check_id_kegiatan/:id_kegiatan", authenticateToken, async (req,res) => {
     id = req.params.id_kegiatan
     query = "SELECT * FROM `kegiatan` WHERE id = '" + id + "';";
     db.query(query, (err,results) => {
@@ -1672,7 +1812,7 @@ app.post("/check_id_kegiatan/:id_kegiatan", authenticateToken, (req,res) => {
 })
 
 // API untuk mendapatkan kode wilayah, dan status pengolahan sensus, parameter : id_kegiatan (id kegiatan sensus)
-app.post("/get_pengolahan_data/:id_kegiatan", (req,res) => {
+app.post("/get_pengolahan_data/:id_kegiatan", async (req,res) => {
     id_kegiatan = req.params.id_kegiatan
     query = "SELECT dokumen.id_dok, dokumen.kode_kec, kecamatan.nama AS 'Kec', dokumen.kode_desa, desa.nama AS 'Desa' ,dokumen.kode_sls, sls.nama_x AS 'SLS', dokumen.ppl, dokumen.pml, dokumen.koseka, sensus.total_dokumen, sensus.tgl_pengdok, sensus.penerima_dok, sensus.status_pengdok, sensus.status_edcod, sensus.petugas_edcod, sensus.tgl_edcod, sensus.status_entri, sensus.petugas_entri, sensus.moda_entri, sensus.tgl_entri FROM `dokumen` INNER JOIN sensus on dokumen.id_kegiatan = sensus.id_kegiatan AND dokumen.id_dok = sensus.id_dok INNER JOIN kecamatan on kecamatan.kode = dokumen.kode_kec INNER JOIN desa on desa.kode = dokumen.kode_desa AND dokumen.kode_kec = desa.kode_kec INNER JOIN sls on sls.kode = dokumen.kode_sls AND sls.kode_desa = dokumen.kode_desa AND sls.kode_kec = dokumen.kode_kec WHERE dokumen.id_kegiatan = '" + id_kegiatan + "' AND sensus.id_kegiatan = '" + id_kegiatan + "' ORDER BY dokumen.kode_kec, dokumen.kode_desa, dokumen.kode_sls ASC;"
     db.query(query, (err,results) => {
@@ -1683,7 +1823,7 @@ app.post("/get_pengolahan_data/:id_kegiatan", (req,res) => {
 
 
 // API untuk mendapatkan kode wilayah, dan status pengolahan sensus, parameter : id_kegiatan (id kegiatan survei)
-app.post("/get_pengolahan_data_survei/:id_kegiatan", (req,res) => {
+app.post("/get_pengolahan_data_survei/:id_kegiatan", async (req,res) => {
     id_kegiatan = req.params.id_kegiatan
     query = "SELECT dokumen.id_dok, dokumen.kode_kec, kecamatan.nama AS 'Kec', dokumen.kode_desa, desa.nama AS 'Desa' , dokumen.x AS 'nama_x', survei.no_blok_sensus, survei.KRT, survei.no_kerangka_sampel , survei.no_ruta AS 'no_ruta', dokumen.ppl, dokumen.pml, dokumen.koseka, survei.tgl_pengdok, survei.penerima_dok, survei.status_pengdok, survei.status_edcod, survei.petugas_edcod, survei.tgl_edcod, survei.status_entri, survei.petugas_entri, survei.moda_entri, survei.tgl_entri FROM dokumen INNER JOIN kecamatan on kecamatan.kode = dokumen.kode_kec INNER JOIN desa on desa.kode = dokumen.kode_desa AND dokumen.kode_kec = desa.kode_kec INNER JOIN survei on dokumen.id_kegiatan = survei.id_kegiatan AND dokumen.id_dok = survei.id_dok WHERE dokumen.id_kegiatan = '" + id_kegiatan + "' AND survei.id_kegiatan = '" + id_kegiatan + "';"
     db.query(query, (err,results) => {
@@ -1693,7 +1833,7 @@ app.post("/get_pengolahan_data_survei/:id_kegiatan", (req,res) => {
 })
 
 // API untuk mendapatkan seluruh Korong (Digunakan untuk memilih sampel dari seluruh SLS yang ada)
-app.post("/get_sls",(req,res) => {
+app.post("/get_sls", async (req,res) => {
     query = "SELECT x.nama AS 'Korong', desa.kode AS 'kode_desa', desa.nama AS 'Desa', kecamatan.kode AS 'kode_kec', kecamatan.nama AS 'Kec' FROM `x` INNER JOIN desa ON x.kode_desa = desa.kode AND x.kode_kec = desa.kode_kec INNER JOIN kecamatan on x.kode_kec = kecamatan.kode ORDER BY kode_kec, kode_desa;"
     db.query(query, (err,results) => {
         if (err) throw err;
@@ -1702,7 +1842,7 @@ app.post("/get_sls",(req,res) => {
 })
 
 // Clone dari get_sls
-app.post("/get_sls2",(req,res) => {
+app.post("/get_sls2", async (req,res) => {
     query = "SELECT sls.kode AS 'kode_sls', sls.nama_x AS 'SLS', desa.kode AS 'kode_desa', desa.nama AS 'Desa', kecamatan.kode AS 'kode_kec', kecamatan.nama AS 'Kec' FROM `sls` INNER JOIN desa ON sls.kode_desa = desa.kode AND sls.kode_kec = desa.kode_kec INNER JOIN kecamatan on sls.kode_kec = kecamatan.kode ORDER BY kecamatan.kode, desa.kode, sls.kode ASC ;"
     db.query(query, (err,results) => {
         if (err) throw err;
@@ -1711,7 +1851,7 @@ app.post("/get_sls2",(req,res) => {
 })
 
 // API untuk mengubah isian tabel survei kolom RB
-app.post("/update_RB_survei", authenticateTokenLevel2, (req,res) => {
+app.post("/update_RB_survei", authenticateTokenLevel2, async (req,res) => {
     const {id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_pengdok, penerima_dok, status_pengdok } = req.body;
     const username = req.user.username
     let query = ''
@@ -1725,6 +1865,7 @@ app.post("/update_RB_survei", authenticateTokenLevel2, (req,res) => {
         if (err) throw err;
         // LOG ACTIVITY
         users_log_activiy(username,"UPDATE_RB",`id:${id_kegiatan} nbs:${no_blok_sensus} nks:${no_kerangka_sampel} ruta:${no_ruta} status:${status_pengdok}`)
+        update_progres(id_kegiatan);
         res.status(200).send({
             msg : "Update Berhasil"
         });
@@ -1732,7 +1873,7 @@ app.post("/update_RB_survei", authenticateTokenLevel2, (req,res) => {
 })
 
 // API untuk mengubah isian tabel survei kolom Edcod
-app.post("/update_Edcod_survei", authenticateTokenLevel2, (req,res) => {
+app.post("/update_Edcod_survei", authenticateTokenLevel2, async (req,res) => {
     const {id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_edcod, petugas_edcod, status_edcod } = req.body;
     const username = req.user.username
     // console.log(id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_edcod, petugas_edcod, status_edcod);
@@ -1747,6 +1888,7 @@ app.post("/update_Edcod_survei", authenticateTokenLevel2, (req,res) => {
         if (err) throw err;
         // LOG ACTIVITY
         users_log_activiy(username,"UPDATE_EDCOD",`id:${id_kegiatan} nbs:${no_blok_sensus} nks:${no_kerangka_sampel} ruta:${no_ruta} status:${status_edcod}`);
+        update_progres(id_kegiatan);
         res.status(200).send({
             msg : "Update Berhasil"
         });
@@ -1754,7 +1896,7 @@ app.post("/update_Edcod_survei", authenticateTokenLevel2, (req,res) => {
 })
 
 // API untuk mengubah isian tabel survei kolom Entri
-app.post("/update_Entri_survei", authenticateTokenLevel2, (req,res) => {
+app.post("/update_Entri_survei", authenticateTokenLevel2, async (req,res) => {
     const username = req.user.username
     const {id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_entri, petugas_entri, status_entri } = req.body;
     // console.log(id_kegiatan, no_blok_sensus, no_kerangka_sampel, no_ruta, tgl_entri, petugas_entri, status_entri);
@@ -1769,6 +1911,7 @@ app.post("/update_Entri_survei", authenticateTokenLevel2, (req,res) => {
         if (err) throw err;
         // LOG ACTIVITY
         users_log_activiy(username,"UPDATE_ENTRI",`id:${id_kegiatan} nbs:${no_blok_sensus} nks:${no_kerangka_sampel} ruta:${no_ruta} status:${status_entri}`)
+        update_progres(id_kegiatan);
         check_is_finish(id_kegiatan, (err,isFinish) => {
             if (err) {
                 console.error(err);
@@ -1785,7 +1928,7 @@ app.post("/update_Entri_survei", authenticateTokenLevel2, (req,res) => {
 })
 
 // API untuk mengubah isian tabel sensus kolom RB
-app.post("/update_RB",authenticateTokenLevel2, (req,res) => {
+app.post("/update_RB",authenticateTokenLevel2, async (req,res) => {
     const username = req.user.username;
     const { id_kegiatan, id_dok, status_pengdok , tgl_pengdok, penerima_dok } = req.body;
     // console.log(req.body);
@@ -1797,11 +1940,11 @@ app.post("/update_RB",authenticateTokenLevel2, (req,res) => {
     }
     // 
 
-
     db.query(query, (err,results) => {
         if (err) throw err;
         // LOG ACTIVITY
         users_log_activiy(username,"UPDATE_RB",`id:${id_kegiatan} status:${status_pengdok}`)
+        update_progres(id_kegiatan);
         res.status(200).send({
             msg: "Update Berhasil"
         });
@@ -1810,7 +1953,7 @@ app.post("/update_RB",authenticateTokenLevel2, (req,res) => {
 })
 
 // API untuk mengubah isian tabel sensus kolom Edcod
-app.post("/update_Edcod", authenticateTokenLevel2, (req,res) => {
+app.post("/update_Edcod", authenticateTokenLevel2, async (req,res) => {
 
     const username = req.user.username;
     const { id_kegiatan, id_dok, status_edcod , tgl_edcod, petugas_edcod } = req.body;
@@ -1830,6 +1973,7 @@ app.post("/update_Edcod", authenticateTokenLevel2, (req,res) => {
         if (err) throw err;
         // LOG ACTIVITY
         users_log_activiy(username,"UPDATE_EDCOD",`id:${id_kegiatan} status:${status_edcod}`)
+        update_progres(id_kegiatan, "edcod");
         res.status(200).send({
             msg: "Update Berhasil"
         });
@@ -1838,7 +1982,7 @@ app.post("/update_Edcod", authenticateTokenLevel2, (req,res) => {
 })
 
 // API untuk mengubah isian tabel sensus kolom Entri
-app.post("/update_Entri", authenticateTokenLevel2, (req,res) => {
+app.post("/update_Entri", authenticateTokenLevel2, async (req,res) => {
     const username = req.user.username;
     const { id_kegiatan, id_dok, status_entri , tgl_entri, petugas_entri, moda } = req.body;
     // console.log(req.body);
@@ -1856,6 +2000,7 @@ app.post("/update_Entri", authenticateTokenLevel2, (req,res) => {
         if (err) throw err;
         // LOG ACTIVITY
         users_log_activiy(username,"UPDATE_ENTRI",`id:${id_kegiatan} status:${status_entri}`)
+        update_progres(id_kegiatan);
         check_is_finish(id_kegiatan, (err,isFinish) => {
             if (err) {
                 console.error(err);
@@ -1870,24 +2015,6 @@ app.post("/update_Entri", authenticateTokenLevel2, (req,res) => {
         });
     })
    
-})
-
-// API untuk mendapatkan progres per petugas survei
-app.post("/progres_petugas_survei/:id_kegiatan", (req,res) => {
-    const id = req.params.id_kegiatan
-    try {
-        let json_query = {
-            pengdok : "",
-            petugas_edcod : "",
-        }
-        // json_query.pengdok = get_penerima_dok(id);
-        json_query.petugas_edcod = get_petugas_edcod(id);
-        // console.log(get_penerima_dok(id));
-        // console.log(json_query);
-        res.status(200).send(json_query);
-    } catch (error) {
-            // console.log(error);
-    }
 })
 
 
