@@ -1112,7 +1112,7 @@ app.post("/get_all_admin", async (req,res) => {
 
 // mendapatkan semua mitra edcod
 app.post("/get_all_mitra_edcod", async (req,res) => {
-    query = "SELECT * FROM `mitra` WHERE status = 'Edcod' AND DATE(start_contract) > DATE_SUB(CURDATE(), INTERVAL 1 DAY) AND CURDATE() < DATE(end_contract);";
+    query = "SELECT * FROM `mitra`WHERE status = 'Edcod' AND CURDATE() BETWEEN DATE(start_contract) AND DATE(end_contract);";
     db.query(query, (err,results) => {
         if (err) throw err;
         res.status(200).send(results);
@@ -1121,7 +1121,7 @@ app.post("/get_all_mitra_edcod", async (req,res) => {
 
 // mendapatkan semua mitra entri
 app.post("/get_all_mitra_entri", async (req,res) => {
-    query = "SELECT * FROM `mitra` WHERE status = 'Entri' AND DATE(start_contract) > DATE_SUB(CURDATE(), INTERVAL 1 DAY) AND CURDATE() < DATE(end_contract);";
+    query = "SELECT * FROM `mitra`WHERE status = 'Entri' AND CURDATE() BETWEEN DATE(start_contract) AND DATE(end_contract);";
     db.query(query, (err,results) => {
         if (err) throw err;
         res.status(200).send(results);
